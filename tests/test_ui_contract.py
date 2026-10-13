@@ -75,3 +75,21 @@ def test_visual_theme_is_grayscale_and_accessible():
     assert ":focus-visible" in CSS
     assert "@media (max-width: 650px)" in CSS
     assert 'aria-label="Secciones del expediente"' in HTML
+
+
+def test_enterprise_directory_replaces_demo_sidebar():
+    page = document()
+    for required in ("directoryScreen", "directoryNext", "directoryPrev",
+                     "directoryDocumentType", "directoryPageLabel",
+                     "registrationScreen", "patientScreen", "navPatients",
+                     "navStaff", "visitListNext", "visitListPrev"):
+        assert required in page.ids, required
+    assert "newPatientDetails" not in page.ids
+    assert 'id="patientList"' in HTML
+    assert '/api/patients/directory?' in JS
+    assert '/api/encounters/directory?' in JS
+    assert "DIRECTORY_LIMIT = 25" in JS
+    assert "VISIT_LIMIT = 15" in JS
+    assert "directory.next" in JS
+    assert "visits.next" in JS
+    assert "textContent = patient.full_name" in JS
