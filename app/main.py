@@ -22,7 +22,7 @@ async def lifespan(application: FastAPI):
 app = FastAPI(
     title="Moímetro",
     description="Prototipo no validado clínicamente de sistema local de historias médicas.",
-    version="0.3.0-beta.1",
+    version="0.3.1-beta.1",
     lifespan=lifespan,
     docs_url=None, redoc_url=None, openapi_url=None,
 )
