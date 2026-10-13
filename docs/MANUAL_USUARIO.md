@@ -102,3 +102,12 @@ Documentación técnica: [Arquitectura](ARCHITECTURE.md), [Seguridad](SEGURIDAD.
 - Los permisos se validan en el servidor: ocultar botones no reemplaza esa protección.
 
 **Limitación:** el historial no significa que los expedientes estén cifrados. Los equipos Windows 7 son solo para pruebas con información ficticia hasta resolver los riesgos de seguridad y la validación clínica.
+
+
+## Ventanas y paneles de tamaño fijo
+
+- Las pestañas del expediente mantienen un área de trabajo de altura controlada. Desplácese dentro de ella cuando existan más datos; la página no se alarga con cada registro.
+- **Ingresar medición manual** abre una ventana independiente. Guardar, **Cancelar**, la tecla **Esc** o pulsar fuera de la ventana la cierran sin mover las otras tarjetas.
+- En **Personal**, los formularios de crear y editar usuarios también aparecen como ventanas sobre la tabla.
+- Las lecturas se muestran de **25 en 25** mediante **Anterior / Siguiente**. Las consultas del historial también están paginadas.
+- Los campos de texto y las tablas tienen altura máxima, con desplazamiento interno si su contenido no cabe. No se borra ni trunca el contenido guardado por esta limitación visual.
