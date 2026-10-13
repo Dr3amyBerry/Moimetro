@@ -2,7 +2,8 @@
 from __future__ import annotations
 import sqlite3
 from datetime import date
-from typing import Annotated, Literal
+from typing import Literal, Optional
+from typing_extensions import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -19,8 +20,8 @@ class PatientCreate(BaseModel):
     document_type: Literal["V", "E", "P", "OTRO"] = "V"
     document_number: str = Field(min_length=4, max_length=25, pattern=r"^[A-Za-z0-9-]+$")
     full_name: str = Field(min_length=2, max_length=150)
-    birth_date: date | None = None
-    phone: str | None = Field(default=None, max_length=40)
+    birth_date: Optional[date] = None
+    phone: Optional[str] = Field(default=None, max_length=40)
 
 def patient_or_404(db, patient_id: int):
     row = db.execute("SELECT * FROM patients WHERE id=?", (patient_id,)).fetchone()
@@ -171,8 +172,8 @@ def update_history(patient_id: int, payload: HistoryUpdate, db: DB, user: Clinic
 
 class PatientEdit(BaseModel):
     full_name: str = Field(min_length=2, max_length=150)
-    birth_date: date | None = None
-    phone: str | None = Field(default=None, max_length=40)
+    birth_date: Optional[date] = None
+    phone: Optional[str] = Field(default=None, max_length=40)
 
 @router.patch("/patients/{patient_id}")
 def edit_patient(patient_id: int, payload: PatientEdit, db: DB, user: User):
