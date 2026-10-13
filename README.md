@@ -93,7 +93,7 @@ La base de datos se guarda en `data/moimetro.sqlite3`, ignorada por Git. Para us
 4. Crear una clave aleatoria con `python -c "import secrets; print(secrets.token_urlsafe(32))"`. Colocar el mismo valor en la configuración local del servidor (`MOIMETRO_DEVICE_KEY`) y en `secrets.h`.
 5. Para **pruebas de laboratorio exclusivamente**, iniciar el servidor en la LAN: `python -m uvicorn app.main:app --host 0.0.0.0 --port 8000`, con firewall restringido al entorno de pruebas.
 6. Compilar y cargar el firmware, abrir monitor serial a 115200. Desde la interfaz, iniciar una sesión de captura en una consulta abierta con cuenta de enfermería/médico/admin.
-7. La interfaz muestra lecturas **pendientes**. El operador autorizado las acepta o rechaza. No se calculará SpO₂ y el triaje permanece deshabilitado.
+7. La interfaz muestra lecturas **pendientes**. El operador autorizado las acepta o rechaza. El firmware calcula R experimental, pero **no registra SpO₂ de dispositivo en expedientes** hasta calibración y validación. El triaje permanece deshabilitado.
 
 En PowerShell, para establecer variables antes de arrancar el servidor:
 
