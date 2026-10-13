@@ -119,6 +119,37 @@ jobs:
           $hash = (Get-FileHash -Algorithm SHA256 $exe.FullName).Hash.ToLower()
           "$hash *$($exe.Name)" | Out-File -Encoding ascii "dist/installer/SHA256SUMS.txt"
 
+      - name: Verificar nombre español y accesos directos instalados
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem "dist/installer/Moimetro-Setup-*.exe" | Select-Object -First 1
+          if (!$installer) { throw "No se encontró el instalador para probar" }
+          $product = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($installer.FullName).ProductName
+          if ($product -cne "Moímetro") {
+            throw "Nombre del instalador corrupto: $product"
+          }
+          $desktopDir = [Environment]::GetFolderPath("DesktopDirectory")
+          $startDir = [Environment]::GetFolderPath("Programs")
+          $oldDesktop = Join-Path $desktopDir "MoÃ­metro.lnk"
+          [System.IO.File]::WriteAllText($oldDesktop, "legacy name from previous installer")
+          $arguments = @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART",
+            "/TASKS=desktopicon", "/DIR=$env:RUNNER_TEMP\Moimetro-Smoke")
+          $installed = Start-Process -FilePath $installer.FullName -ArgumentList $arguments -PassThru -Wait
+          if ($installed.ExitCode -ne 0) {
+            throw "Instalador falló al ejecutarse: $($installed.ExitCode)"
+          }
+          $desktopLink = Join-Path $desktopDir "Moímetro.lnk"
+          $startLink = Join-Path $startDir "Moímetro.lnk"
+          if (!(Test-Path -LiteralPath $desktopLink)) {
+            throw "El acceso directo del escritorio no se llama Moímetro"
+          }
+          if (!(Test-Path -LiteralPath $startLink)) {
+            throw "El acceso directo de Inicio no se llama Moímetro"
+          }
+          if (Test-Path -LiteralPath $oldDesktop) {
+            throw "No se eliminó el acceso directo antiguo con nombre corrupto"
+          }
+
       - name: Publicar instalador descargable
         uses: actions/upload-artifact@v4
         with:
