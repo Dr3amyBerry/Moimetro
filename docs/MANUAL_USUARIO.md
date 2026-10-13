@@ -91,3 +91,14 @@ python -m app.manage verify-backup --input ruta/segura/copia.sqlite3
 | No se puede editar | Revisar rol o si la consulta ya está cerrada. |
 
 Documentación técnica: [Arquitectura](ARCHITECTURE.md), [Seguridad](SEGURIDAD.md), [Validación](VALIDACION.md) y [Roadmap](../PLAN_MAESTRO.md).
+
+
+## Seguridad de cuentas y registro de cambios
+
+- Cada persona autorizada dispone de **Mi contraseña** en la barra superior. Debe indicar la clave actual y la nueva; al guardar deberá iniciar sesión otra vez. No se conserva la contraseña en el navegador.
+- En **Personal**, el administrador pulsa **Administrar** junto a una cuenta para cambiar su rol, bloquear/reactivar el acceso o establecer una nueva contraseña. Las sesiones anteriores quedan revocadas. No es posible bloquear al último administrador.
+- En **Datos del paciente**, el personal clínico autorizado ve **Historial de cambios**, con autor, fecha, motivo y campos modificados. Los valores originales se conservan para revisión administrativa, no se modifican las entradas antiguas.
+- Al modificar datos, antecedentes o evolución clínica se puede registrar un motivo. No deben incluirse contraseñas ni secretos en estos textos.
+- Los permisos se validan en el servidor: ocultar botones no reemplaza esa protección.
+
+**Limitación:** el historial no significa que los expedientes estén cifrados. Los equipos Windows 7 son solo para pruebas con información ficticia hasta resolver los riesgos de seguridad y la validación clínica.
