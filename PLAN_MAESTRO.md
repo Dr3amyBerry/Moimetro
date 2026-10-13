@@ -16,7 +16,7 @@
 | Área | Evidencia implementada | Estado actual |
 |---|---|---|
 | Estructura y dependencias | `requirements.txt`, `app/`, `firmware/platformio.ini`, `tests/` | Código implementado; integración en evaluación |
-| Pacientes por cédula | `app/api/records.py` y `app/static/` | Implementado y con pruebas API; pruebas operativas pendientes |
+| Directorio amplio de pacientes | `app/api/records.py`, `app/storage.py`, `app/static/`, tests de paginación y búsqueda FTS5 | Código implementado: búsqueda indexada, páginas de 25, filtros y formularios separados. Pruebas CI en evaluación; rendimiento con 50k–100k registros y usabilidad real pendientes |
 | Historial y consultas | `patients`, `patient_histories`, `encounters` | Código implementado; no validado con pacientes reales |
 | Usuarios y roles | `app/security.py`, `app/api/auth.py`, `app/manage.py` | Roles básicos implementados; endurecimiento pendiente |
 | Firmware de sensores | `firmware/src/main.cpp` | Compilación CI de versión inicial exitosa; pruebas físicas pendientes |
