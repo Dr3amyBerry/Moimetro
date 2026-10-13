@@ -315,3 +315,50 @@ def test_long_patient_history_is_paginated_and_scoped(client):
                       params={"patient_id": patients[0], "limit": 999}).status_code == 422
     assert client.get("/api/encounters/directory",
                       params={"patient_id": patients[0]}).status_code == 401
+
+
+def test_directory_finds_surnames_and_updates_search_index(client):
+    headers = login(client)
+    pid = patient(client, headers)
+    updated = client.patch("/api/patients/{}".format(pid), headers=headers, json={
+        "full_name": "Juana García Sintética", "birth_date": None, "phone": None
+    })
+    assert updated.status_code == 200
+    for term in ("gar", "GARCIA", "sint", "juana", "V-12345678"):
+        response = client.get("/api/patients/directory", headers=headers,
+                              params={"q": term})
+        assert response.status_code == 200, response.text
+        assert [item["id"] for item in response.json()["items"]] == [pid]
+
+    # The old first-name tokens must no longer return this patient.
+    response = client.get("/api/patients/directory", headers=headers,
+                          params={"q": "Paciente"})
+    assert response.json()["items"] == []
+
+
+def test_fts_index_backfills_existing_patients_without_changing_records(
+    tmp_path, monkeypatch
+):
+    import sqlite3
+    from app.storage import SCHEMA, db_path, init_db
+    monkeypatch.setenv("MOIMETRO_DB_PATH", str(tmp_path / "previous.sqlite3"))
+    with sqlite3.connect(str(db_path())) as db:
+        db.executescript(SCHEMA)
+        db.execute(
+            """INSERT INTO patients(
+                document_type,document_number,full_name,created_at
+            ) VALUES ('V','76543210','Paciente Histórico García','2024-01-01T00:00:00')"""
+        )
+        db.commit()
+    init_db()
+    with sqlite3.connect(str(db_path())) as db:
+        assert db.execute("SELECT COUNT(*) FROM patients").fetchone()[0] == 1
+        assert db.execute(
+            "SELECT COUNT(*) FROM patients_fts WHERE patients_fts MATCH ?",
+            ('"garcia"*',),
+        ).fetchone()[0] == 1
+        assert db.execute("PRAGMA user_version").fetchone()[0] >= 1
+    # A second startup should not recreate the index or modify patient data.
+    init_db()
+    with sqlite3.connect(str(db_path())) as db:
+        assert db.execute("SELECT COUNT(*) FROM patients").fetchone()[0] == 1
