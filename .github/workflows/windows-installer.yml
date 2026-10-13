@@ -1,0 +1,143 @@
+name: Instaladores Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ['v*']
+    paths:
+      - 'app/**'
+      - 'requirements.txt'
+      - 'requirements-win7*.txt'
+      - 'requirements-dev.txt'
+      - 'tests/**'
+      - 'packaging/windows/**'
+      - '.github/workflows/windows-installer.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-installers-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: ${{ matrix.target }}
+    runs-on: windows-2022
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: legacy-x86
+            python: '3.8'
+            architecture: x86
+            requirements: requirements-win7-dev.txt
+            pyinstaller: '5.13.2'
+            flavor: legacy
+          - target: legacy-x64
+            python: '3.8'
+            architecture: x64
+            requirements: requirements-win7-dev.txt
+            pyinstaller: '5.13.2'
+            flavor: legacy
+          - target: modern-x64
+            python: '3.11'
+            architecture: x64
+            requirements: requirements-dev.txt
+            pyinstaller: '6.15.0'
+            flavor: modern
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: ${{ matrix.architecture }}
+          cache: pip
+          cache-dependency-path: ${{ matrix.requirements }}
+
+      - name: Instalar dependencias
+        shell: pwsh
+        run: |
+          python -m pip install -r "${{ matrix.requirements }}"
+          python -m pip install "pyinstaller==${{ matrix.pyinstaller }}"
+
+      - name: Probar API y compatibilidad Python
+        shell: pwsh
+        run: python -m pytest -q
+
+      - name: Empaquetar aplicación con Python incluido
+        shell: pwsh
+        run: |
+          python -m PyInstaller --noconfirm --clean --onedir --windowed `
+            --name "Moimetro" `
+            --add-data "app/static;app/static" `
+            --collect-submodules "uvicorn" `
+            --hidden-import "app.main" `
+            app/launcher.py
+          if ($LASTEXITCODE -ne 0) { throw "Error de PyInstaller" }
+          if (!(Test-Path "dist/Moimetro/Moimetro.exe")) {
+            throw "No se generó Moimetro.exe"
+          }
+
+      - name: Probar ejecutable sin abrir interfaz
+        shell: pwsh
+        run: |
+          $proc = Start-Process -FilePath (Resolve-Path "dist/Moimetro/Moimetro.exe") `
+            -ArgumentList "--self-test" -PassThru -Wait
+          if ($proc.ExitCode -ne 0) { throw "El EXE falló: $($proc.ExitCode)" }
+
+      - name: Instalar compilador de instaladores
+        shell: pwsh
+        run: |
+          choco install innosetup --version=6.2.2 -y --allow-downgrade --no-progress
+          if ($LASTEXITCODE -ne 0) { throw "No se pudo instalar Inno Setup" }
+
+      - name: Crear instalador .exe
+        shell: pwsh
+        run: |
+          $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $compiler)) {
+            $compiler = "C:\Program Files\Inno Setup 6\ISCC.exe"
+          }
+          if (!(Test-Path $compiler)) { throw "No se encontró ISCC.exe" }
+          & $compiler "/DBuildRoot=$env:GITHUB_WORKSPACE" `
+            "/DArch=${{ matrix.architecture }}" `
+            "/DFlavor=${{ matrix.flavor }}" `
+            "packaging\windows\Moimetro.iss"
+          if ($LASTEXITCODE -ne 0) { throw "No se compiló el instalador" }
+          $exe = Get-ChildItem "dist/installer/*.exe" | Select-Object -First 1
+          if (!$exe) { throw "No se creó el instalador" }
+          $hash = (Get-FileHash -Algorithm SHA256 $exe.FullName).Hash.ToLower()
+          "$hash *$($exe.Name)" | Out-File -Encoding ascii "dist/installer/SHA256SUMS.txt"
+
+      - name: Publicar instalador descargable
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.target }}
+          path: |
+            dist/installer/*.exe
+            dist/installer/SHA256SUMS.txt
+          retention-days: 30
+          if-no-files-found: error
+
+  release:
+    name: Release de instaladores
+    needs: package
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installer-*
+          path: installers
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: installers/*.exe
+          generate_release_notes: true
+          prerelease: true
