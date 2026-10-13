@@ -98,6 +98,12 @@ async function selectPatient(id) {
   el("patientDetails").textContent =
     "Documento " + state.patient.document_type + "-" + state.patient.document_number +
     (state.patient.birth_date ? " · Nacimiento: " + state.patient.birth_date : "");
+  const history = await api("/api/patients/" + id + "/history");
+  el("historyForm").elements.allergies.value = history.allergies;
+  el("historyForm").elements.background.value = history.background;
+  for (const control of el("historyForm").querySelectorAll("textarea,button")) {
+    control.disabled = !mayClinicallyEdit();
+  }
   el("patientWork").hidden = false;
   el("encounterWork").hidden = true;
   await Promise.all([loadEncounters(), loadPatients()]);
@@ -250,6 +256,13 @@ el("patientForm").addEventListener("submit", safe(async e => {
   e.target.reset();
   toast("Paciente registrado.");
   await selectPatient(created.id);
+}));
+el("historyForm").addEventListener("submit", safe(async e => {
+  if (!state.patient) return;
+  await api("/api/patients/" + state.patient.id + "/history", {
+    method: "PUT", body: JSON.stringify(formValue(e.target))
+  });
+  toast("Antecedentes actualizados.");
 }));
 el("encounterForm").addEventListener("submit", safe(async e => {
   if (!state.patient) return;
