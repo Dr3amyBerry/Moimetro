@@ -4,7 +4,7 @@ import hashlib
 import sqlite3
 from collections import defaultdict
 from time import monotonic
-from typing import Dict, List, Literal
+from typing import Dict, List, Literal, Optional
 from typing_extensions import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
@@ -64,7 +64,7 @@ def staff_directory(
     admin: Admin,
     q: str = Query(default="", max_length=50),
     limit: int = Query(default=20, ge=1, le=50),
-    before: int = Query(default=None, ge=1),
+    before: Optional[int] = Query(default=None, ge=1),
 ):
     """Admin-only staff listing; passwords and sessions are never returned."""
     where = []
