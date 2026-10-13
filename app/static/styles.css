@@ -389,3 +389,143 @@ td button:hover { background: #e5e8eb; }
   #staffManageForm > p, #staffManageForm label:nth-of-type(3) { grid-column: auto; }
   .topbar-actions .user-identity { display: none; }
 }
+
+
+/* Stable application workspace (bounded content; no expanding page sections).
+ * Opening an action uses a fixed overlay; only its own content scrolls.
+ * Layout uses viewport units supported by Windows 7 compatible browsers. */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.workspace { align-items: start; }
+.sidebar {
+  position: sticky;
+  top: 74px;
+  height: calc(100vh - 74px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+body.modal-open { overflow: hidden; }
+.content, .area-screen, .view-panel, .panel, .table-scroller { min-width: 0; }
+.panel, .sidebar, .directory-panel { overflow-wrap: anywhere; }
+textarea {
+  resize: none;
+  max-height: 150px;
+}
+#patientScreen .view-panel {
+  height: clamp(440px, calc(100vh - 355px), 760px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding: 1px 5px 16px 1px;
+  scrollbar-width: thin;
+}
+#patientScreen .overview-grid,
+#patientScreen .profile-grid,
+#patientScreen .consultation-grid {
+  align-items: start;
+}
+#patientScreen .overview-grid > .panel,
+#patientScreen .profile-grid > .panel,
+#patientScreen .consultation-grid > .panel {
+  height: auto;
+  max-height: 540px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  min-width: 0;
+}
+#patientScreen .consultation-grid .panel { height: auto; }
+#patientScreen .encounter-list {
+  max-height: 280px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+#patientScreen .revision-list,
+#patientScreen #revisionList {
+  max-height: 250px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+#patientScreen .readings-panel { max-width: 100%; }
+.reading-scroller {
+  height: min(290px, 38vh);
+  min-height: 170px;
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.reading-scroller table { min-width: 720px; }
+.reading-scroller th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.readings-pagination {
+  padding: 12px 0;
+}
+.manual-action {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.manual-action .muted { margin: 8px 0 0; }
+.directory-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: clamp(410px, calc(100vh - 180px), 850px);
+}
+.directory-panel > .table-scroller {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 520px;
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.directory-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.directory-panel > .directory-toolbar,
+.directory-panel > .pagination,
+.directory-panel > .directory-status { flex: 0 0 auto; }
+.directory-panel .pagination,
+#patientScreen .pagination { flex-wrap: wrap; }
+.account-overlay { overflow-y: auto; overscroll-behavior: contain; padding: 22px; }
+.account-modal {
+  margin: auto;
+  max-height: calc(100vh - 44px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+#staffCreatePanel .account-modal,
+#staffManagePanel .account-modal,
+#manualMeasureDialog .account-modal { width: min(100%, 540px); }
+#manualMeasureDialog .form-stack,
+#staffCreatePanel .form-stack,
+#staffManagePanel .form-stack { gap: 14px; }
+#manualMeasureDialog .manual-form { margin-top: 0; }
+
+@media (max-width: 850px) {
+  .sidebar { position: static; top: auto; height: auto; overflow: visible; }
+  #patientScreen .view-panel {
+    height: clamp(425px, calc(100vh - 360px), 690px);
+  }
+}
+@media (max-width: 650px) {
+  .account-overlay { padding: 12px; }
+  .account-modal { max-height: calc(100vh - 24px); }
+  .readings-pagination { gap: 9px; }
+  #patientScreen .view-panel {
+    height: clamp(420px, calc(100vh - 340px), 660px);
+    padding-right: 2px;
+  }
+  .directory-panel { max-height: clamp(360px, calc(100vh - 280px), 680px); }
+  .directory-panel > .table-scroller { max-height: 430px; }
+}
