@@ -81,8 +81,14 @@ def test_capture_patient_identity_and_close(client):
     assert client.post(f"/api/measurements/{reading['id']}/accept", headers=headers).status_code == 200
     assert client.post(f"/api/measurements/{reading['id']}/accept", headers=headers).status_code == 409
     assert client.post(f"/api/encounters/{encounter_id}/close", headers=headers).status_code == 409
+    # A still-pending reading cannot be accepted after the visit has closed.
+    assert client.post("/api/device/measurements", headers=device_headers,
+                       json=batch).status_code == 201
+    pending_id = client.get("/api/measurements", headers=headers,
+                            params={"encounter_id": encounter_id}).json()[0]["id"]
     assert client.post(f"/api/capture/{session}/stop", headers=headers).status_code == 200
     assert client.post(f"/api/encounters/{encounter_id}/close", headers=headers).status_code == 200
+    assert client.post(f"/api/measurements/{pending_id}/accept", headers=headers).status_code == 409
     assert client.post("/api/device/measurements", headers=device_headers,
                        json=batch).status_code == 409
 
