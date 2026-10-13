@@ -238,9 +238,9 @@ el("logoutButton").addEventListener("click", safe(async () => {
   finally { state.token = null; showLogin(); }
 }));
 el("searchButton").addEventListener("click", safe(loadPatients));
-el("search").addEventListener("keydown", safe(async e => {
-  if (e.key === "Enter") { e.preventDefault(); await loadPatients(); }
-}));
+el("search").addEventListener("keydown", e => {
+  if (e.key === "Enter") { e.preventDefault(); loadPatients().catch(error => toast(error.message, true)); }
+});
 el("patientForm").addEventListener("submit", safe(async e => {
   const form = formValue(e.target);
   const created = await api("/api/patients", {
