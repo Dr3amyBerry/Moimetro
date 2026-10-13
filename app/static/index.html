@@ -17,6 +17,7 @@
       <span class="topbar-status"><span class="status-dot" aria-hidden="true"></span>Sistema local</span>
       <span class="prototype">Prototipo sin validación clínica</span>
       <span id="identity" class="user-identity"></span>
+      <button id="changePasswordButton" type="button" class="button button-quiet" hidden>Mi contraseña</button>
       <button id="logoutButton" type="button" class="button button-quiet" hidden>Cerrar sesión</button>
     </div>
   </header>
@@ -156,6 +157,27 @@
           </div>
           <button id="newStaffButton" class="button button-primary" type="button">+ Nuevo usuario</button>
         </header>
+        <section id="staffManagePanel" class="panel form-page-panel extra-form" hidden>
+          <div class="panel-heading"><h2 id="staffManageTitle">Administrar usuario</h2>
+            <button id="cancelStaffManage" class="button button-quiet" type="button">Cerrar</button>
+          </div>
+          <form id="staffManageForm" class="form-stack">
+            <label>Rol
+              <select name="role">
+                <option value="reception">Recepción</option><option value="nurse">Enfermería</option>
+                <option value="clinician">Médico</option><option value="admin">Administrador</option>
+              </select>
+            </label>
+            <label>Acceso
+              <select name="active"><option value="true">Activo</option><option value="false">Bloqueado</option></select>
+            </label>
+            <label>Contraseña nueva (opcional, mínimo 12 caracteres)
+              <input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="256">
+            </label>
+            <p class="muted">Al guardar, se cierran las sesiones de la cuenta cuando cambien sus permisos o contraseña.</p>
+            <button class="button button-primary" type="submit">Guardar acceso</button>
+          </form>
+        </section>
         <section id="staffCreatePanel" class="panel form-page-panel extra-form" hidden>
           <div class="panel-heading"><h2>Nuevo usuario</h2>
             <button id="cancelStaffButton" class="button button-quiet" type="button">Cancelar</button>
@@ -186,8 +208,8 @@
           <div id="staffStatus" class="directory-status" aria-live="polite"></div>
           <div class="table-scroller">
             <table class="directory-table staff-table" aria-label="Personal autorizado">
-              <thead><tr><th>Usuario</th><th>Rol</th><th>Estado</th><th>Registro</th></tr></thead>
-              <tbody id="staffList"><tr><td colspan="4">Cargando usuarios…</td></tr></tbody>
+              <thead><tr><th>Usuario</th><th>Rol</th><th>Estado</th><th>Registro</th><th>Acción</th></tr></thead>
+              <tbody id="staffList"><tr><td colspan="5">Cargando usuarios…</td></tr></tbody>
             </table>
           </div>
           <div class="pagination">
@@ -255,6 +277,9 @@
                 <label>Nombre completo<input name="full_name" minlength="2" required></label>
                 <label>Fecha de nacimiento<input name="birth_date" type="date"></label>
                 <label>Teléfono<input name="phone"></label>
+                <label>Motivo de corrección (opcional)
+                  <input name="reason" minlength="8" maxlength="500" placeholder="Ej. corrección del nombre">
+                </label>
                 <div class="form-actions"><button type="submit" class="button button-primary">Guardar cambios</button></div>
               </form>
             </section>
@@ -263,10 +288,24 @@
               <form id="historyForm" class="form-stack">
                 <label>Alergias<textarea name="allergies" rows="4" placeholder="Información registrada"></textarea></label>
                 <label>Antecedentes<textarea name="background" rows="4" placeholder="Historial relevante"></textarea></label>
+                <label>Motivo de cambio (opcional)
+                  <input name="reason" minlength="8" maxlength="500" placeholder="Ej. actualización de antecedentes">
+                </label>
                 <div class="form-actions"><button type="submit" class="button button-primary">Guardar antecedentes</button></div>
               </form>
             </section>
           </div>
+          <section id="revisionPanel" class="panel revisions-panel" hidden>
+            <div class="panel-heading"><h3>Historial de cambios</h3><span class="muted">Solo personal clínico autorizado</span></div>
+            <div id="revisionList" class="item-list" aria-live="polite"></div>
+            <div class="pagination">
+              <span id="revisionPageLabel">Página 1</span>
+              <div class="pagination-actions">
+                <button id="revisionPrev" class="button button-quiet" type="button" disabled>Anterior</button>
+                <button id="revisionNext" class="button button-quiet" type="button" disabled>Siguiente</button>
+              </div>
+            </div>
+          </section>
         </div>
 
         <div id="viewEncounter" class="view-panel" hidden>
@@ -323,6 +362,9 @@
                   <label>Evaluación<textarea name="assessment" rows="3"></textarea></label>
                   <label>Diagnóstico<textarea name="diagnosis" rows="2"></textarea></label>
                   <label>Tratamiento<textarea name="treatment" rows="2"></textarea></label>
+                  <label>Motivo de actualización (opcional)
+                    <input name="reason" minlength="8" maxlength="500" placeholder="Ej. evolución clínica">
+                  </label>
                   <button type="submit" class="button button-primary">Guardar evolución</button>
                 </form>
               </section>
@@ -348,6 +390,20 @@
       </section>
     </main>
   </div>
+  <section id="accountPanel" class="account-overlay" hidden>
+    <div class="panel account-modal">
+      <div class="panel-heading"><h2>Cambiar mi contraseña</h2>
+        <button id="closeAccountPanel" class="button button-quiet" type="button">Cancelar</button>
+      </div>
+      <form id="passwordForm" class="form-stack">
+        <label>Contraseña actual<input name="current_password" type="password" required autocomplete="current-password"></label>
+        <label>Nueva contraseña<input name="new_password" type="password" minlength="12" maxlength="256" required autocomplete="new-password"></label>
+        <label>Repetir nueva contraseña<input name="confirmation" type="password" minlength="12" maxlength="256" required autocomplete="new-password"></label>
+        <p class="muted">Por seguridad, después del cambio deberás iniciar sesión otra vez.</p>
+        <button type="submit" class="button button-primary">Actualizar contraseña</button>
+      </form>
+    </div>
+  </section>
   <div id="toast" role="status" aria-live="polite"></div>
   <script src="/static/app.js" defer></script>
 </body>
