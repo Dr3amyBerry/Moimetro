@@ -14,6 +14,6 @@ La documentación no depende del cierre de desarrollo: debe redactar requisitos,
 | DOC-08 | Triaje y protocolos | Pendiente de supervisión clínica | Revisión con personal del consultorio |
 | DOC-09 | Seguridad y privacidad | Borrador: `docs/SEGURIDAD.md` | Aprobación de medidas para datos reales |
 | DOC-10 | Pruebas | Matriz: `docs/VALIDACION.md` | Evidencias y resultados de hardware |
-| DOC-11 | Manuales / informe final | Parcial: `README.md` | Manual del usuario, mantenimiento e informe |
+| DOC-11 | Manuales / informe final | Borrador: `README.md`, `docs/MANUAL_USUARIO.md` | Manual técnico de mantenimiento e informe |
 
 Una casilla documental **no** se marca completa sin texto revisado y referencias correctas. Las tareas DOC pueden avanzar sin esperar a que DEV haya terminado.
