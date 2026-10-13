@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Moímetro · Consultorio local</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">✚</span><span>Moímetro<small>Consultorio Popular Tipo III Las Cayenas</small></span></div>
+    <div class="topright"><span class="prototype">Prototipo · No validado clínicamente</span><span id="identity"></span><button id="logoutButton" class="ghost" hidden>Salir</button></div>
+  </header>
+  <main id="loginScreen" class="login-layout">
+    <section class="panel login-card">
+      <p class="eyebrow">Acceso al sistema local</p><h1>Bienvenido a Moímetro</h1>
+      <p class="muted">Historias clínicas y mediciones en red local. Internet no es necesario.</p>
+      <form id="loginForm">
+        <label>Usuario<input name="username" required autocomplete="username" minlength="3"></label>
+        <label>Contraseña<input name="password" type="password" required autocomplete="current-password"></label>
+        <button class="primary" type="submit">Iniciar sesión</button>
+      </form>
+      <p class="help">Para crear el primer administrador: <code>python -m app.manage create-admin</code></p>
+    </section>
+  </main>
+  <div id="workScreen" class="workspace" hidden>
+    <aside class="sidebar">
+      <section class="panel">
+        <p class="eyebrow">Recepción</p><h2>Pacientes</h2>
+        <label for="search">Buscar por cédula o nombre</label>
+        <div class="searchbar"><input id="search" placeholder="Ej. 12345678"><button id="searchButton" class="secondary">Buscar</button></div>
+        <div id="patientList" class="item-list" aria-live="polite"></div>
+      </section>
+      <section class="panel">
+        <h2>Nuevo paciente</h2>
+        <form id="patientForm">
+          <label>Documento<select name="document_type"><option>V</option><option>E</option><option>P</option><option>OTRO</option></select></label>
+          <label>Número de cédula<input name="document_number" required minlength="4" maxlength="25" pattern="[a-zA-Z0-9-]+"></label>
+          <label>Nombre completo<input name="full_name" required minlength="2"></label>
+          <label>Fecha de nacimiento<input name="birth_date" type="date"></label>
+          <label>Teléfono (opcional)<input name="phone"></label>
+          <button class="primary" type="submit">Registrar paciente</button>
+        </form>
+      </section>
+    </aside>
+    <div class="content">
+      <section class="panel patient-header">
+        <div><p class="eyebrow">Expediente local</p><h1 id="patientTitle">Seleccione un paciente</h1><p id="patientDetails" class="muted">Utilice la búsqueda o cree un registro nuevo.</p></div>
+      </section>
+      <div id="patientWork" hidden>
+        <div class="columns">
+          <section class="panel">
+            <h2>Iniciar consulta</h2>
+            <form id="encounterForm">
+              <label>Motivo de consulta<textarea name="reason" required minlength="3" rows="2" placeholder="Motivo informado por el paciente"></textarea></label>
+              <button class="primary" type="submit">Abrir consulta</button>
+            </form>
+          </section>
+          <section class="panel">
+            <h2>Historial</h2>
+            <div id="encounterList" class="item-list"></div>
+          </section>
+        </div>
+        <section id="encounterWork" class="panel" hidden>
+          <div class="section-heading"><div><p class="eyebrow" id="encounterMeta"></p><h2>Consulta seleccionada</h2></div><button id="closeEncounterButton" class="secondary">Cerrar consulta</button></div>
+          <div class="notice caution"><strong>Triaje deshabilitado.</strong> No se asignan prioridades automáticas ni se sustituyen decisiones del personal médico.</div>
+          <div class="columns">
+            <section class="nested">
+              <h3>Captura de sensores</h3>
+              <p class="muted">Inicie una sesión para que el ESP32 vincule sus mediciones con esta consulta. Cada lectura requiere revisión.</p>
+              <p id="captureState" class="status-line">Sin sesión activa</p>
+              <div class="button-row"><button id="startCaptureButton" class="primary">Iniciar captura</button><button id="stopCaptureButton" class="secondary">Detener captura</button><button id="refreshReadingsButton" class="secondary">Actualizar</button></div>
+            </section>
+            <section class="nested">
+              <h3>Agregar medición manual</h3>
+              <form id="manualForm">
+                <label>Variable<select name="kind">
+                  <option value="body_temp_c">Temperatura corporal (°C)</option>
+                  <option value="pulse_bpm">Frecuencia cardíaca (BPM)</option>
+                  <option value="spo2_pct">SpO₂ de instrumento externo (%)</option>
+                  <option value="ambient_temp_c">Temperatura ambiente (°C)</option>
+                  <option value="humidity_pct">Humedad (%)</option>
+                </select></label>
+                <label>Valor medido<input type="number" name="value" required step="any"></label>
+                <label>Origen / instrumento empleado<textarea name="notes" minlength="8" required rows="2" placeholder="Identifique instrumento y contexto de lectura"></textarea></label>
+                <button class="secondary" type="submit">Registrar medición manual</button>
+              </form>
+            </section>
+          </div>
+          <h3>Lecturas y revisión</h3>
+          <div class="table-scroller"><table><thead><tr><th>Momento</th><th>Variable</th><th>Valor</th><th>Origen</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="measurementList"><tr><td colspan="6">Sin lecturas registradas.</td></tr></tbody></table></div>
+          <section class="nested clinical-panel">
+            <h3>Evolución clínica</h3>
+            <p class="muted">Solo un profesional con rol clínico puede modificar estos campos.</p>
+            <form id="clinicalForm">
+              <label>Evaluación<textarea name="assessment" rows="3"></textarea></label>
+              <label>Diagnóstico<textarea name="diagnosis" rows="2"></textarea></label>
+              <label>Tratamiento<textarea name="treatment" rows="2"></textarea></label>
+              <button class="primary" type="submit">Guardar evolución</button>
+            </form>
+          </section>
+        </section>
+      </div>
+    </div>
+  </div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <footer>Moímetro · Prototipo técnico. Usar exclusivamente datos ficticios hasta completar seguridad, pruebas y revisión clínica.</footer>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
