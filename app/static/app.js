@@ -99,6 +99,9 @@ async function selectPatient(id) {
   el("patientDetails").textContent =
     "Documento " + state.patient.document_type + "-" + state.patient.document_number +
     (state.patient.birth_date ? " · Nacimiento: " + state.patient.birth_date : "");
+  el("patientEditForm").elements.full_name.value = state.patient.full_name;
+  el("patientEditForm").elements.birth_date.value = state.patient.birth_date || "";
+  el("patientEditForm").elements.phone.value = state.patient.phone || "";
   const history = await api("/api/patients/" + id + "/history");
   el("historyForm").elements.allergies.value = history.allergies;
   el("historyForm").elements.background.value = history.background;
@@ -257,6 +260,17 @@ el("patientForm").addEventListener("submit", safe(async e => {
   e.target.reset();
   toast("Paciente registrado.");
   await selectPatient(created.id);
+}));
+el("patientEditForm").addEventListener("submit", safe(async e => {
+  if (!state.patient) return;
+  const form = formValue(e.target);
+  await api("/api/patients/" + state.patient.id, {
+    method: "PATCH", body: JSON.stringify({
+      ...form, birth_date: form.birth_date || null, phone: form.phone || null
+    })
+  });
+  await selectPatient(state.patient.id);
+  toast("Datos personales actualizados.");
 }));
 el("historyForm").addEventListener("submit", safe(async e => {
   if (!state.patient) return;
