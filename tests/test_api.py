@@ -129,3 +129,42 @@ def test_roles_manual_provenance_and_closed_immutability(client):
     assert client.patch(f"/api/encounters/{encounter_id}", headers=headers,
                         json={"assessment": "Después", "diagnosis": "",
                               "treatment": ""}).status_code == 409
+
+
+def test_patient_history_is_private_and_role_protected(client):
+    admin = login(client)
+    pid = patient(client, admin)
+    empty = client.get(f"/api/patients/{pid}/history", headers=admin)
+    assert empty.status_code == 200
+    assert empty.json()["allergies"] == ""
+    saved = client.put(f"/api/patients/{pid}/history", headers=admin, json={
+        "allergies": "Alergia sintética para pruebas",
+        "background": "Antecedente ficticio, sin paciente real",
+    })
+    assert saved.status_code == 200
+    result = client.get(f"/api/patients/{pid}/history", headers=admin).json()
+    assert result["background"].startswith("Antecedente ficticio")
+    staff = client.post("/api/admin/users", headers=admin, json={
+        "username": "readonly_staff", "password": "password-for-reception-123",
+        "role": "reception",
+    })
+    assert staff.status_code == 201
+    limited = login(client, "readonly_staff", "password-for-reception-123")
+    denied = client.put(f"/api/patients/{pid}/history", headers=limited, json={
+        "allergies": "", "background": "",
+    })
+    assert denied.status_code == 403
+
+
+def test_consistent_backup_and_repeated_backup_refused(client, tmp_path):
+    from app.manage import backup_to, check_backup
+    import sqlite3
+    admin = login(client)
+    patient(client, admin)
+    location = tmp_path / "backup.sqlite3"
+    backup_to(location)
+    check_backup(location)
+    with sqlite3.connect(location) as copied:
+        assert copied.execute("SELECT COUNT(*) FROM patients").fetchone()[0] == 1
+    with pytest.raises(ValueError, match="existe"):
+        backup_to(location)
