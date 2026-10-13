@@ -4,6 +4,7 @@
 
 - **Pruebas de API automatizadas**: presentes en `tests/test_api.py` y workflow `.github/workflows/test.yml`.
 - **Compilación automatizada ESP32**: workflow con PlatformIO; compilación no prueba cableado ni precisión.
+- **Algoritmo PPG Rojo/IR**: pruebas de C++ nativo con PPG sintético, señal débil, pérdida de dedo, deriva, saturación ADC, movimiento, curva de calibración configurable; no sustituye pruebas físicas.
 - **Validación física de sensores**: **pendiente**.
 - **Clasificación automática de triaje**: **deshabilitada y pendiente de protocolo/revisión**.
 - **Seguridad para expedientes reales**: **no demostrada**.
@@ -23,7 +24,7 @@
 | QA-009 | API y frontend sin Internet | PC y ESP32 en router sin WAN | Pendiente prueba física |
 | QA-010 | Recalibración DS18B20 | Comparación repetida con termómetro de referencia | Pendiente |
 | QA-011 | BPM MAX30102 | Comparación repetida con referencia y movimiento | Pendiente |
-| QA-012 | SpO₂ MAX30102 | Algoritmo real y evaluación contra referencia aceptada | Pendiente |
+| QA-012 | SpO₂ MAX30102 | R rojo/IR calculado y probado sintéticamente; comparar con referencia y calibrar | Algoritmo de laboratorio implementado; validación física/clínica pendiente |
 | QA-013 | Calidad de triaje | Protocolos clínicos aprobados, casos normales/urgentes y revisión profesional | Pendiente |
 | QA-014 | Pérdida WiFi/reinicio/corte de energía | Sin pacientes mezclados ni lecturas antiguas aceptadas | Pendiente |
 | QA-015 | Auditoría, permisos y privacidad clínica | Prueba de roles y revisión de amenazas | Parcial, no aprobada |
@@ -61,3 +62,5 @@ Conclusión:
 Responsable / revisión clínica (si aplica):
 Enlace de evidencia:
 ```
+
+Consulte [SPO2_CALIBRACION.md](SPO2_CALIBRACION.md) para las limitaciones de R y el proceso pendiente de referencia y calibración.
