@@ -152,11 +152,38 @@
           <div>
             <p class="section-kicker">ADMINISTRACIÓN</p>
             <h1>Personal del centro</h1>
-            <p class="muted">Acceso y funciones para el personal autorizado.</p>
+            <p class="muted">Usuarios autorizados y niveles de acceso.</p>
           </div>
+          <button id="newStaffButton" class="button button-primary" type="button">+ Nuevo usuario</button>
         </header>
-        <section class="panel form-page-panel">
-          <h2>Nuevo usuario</h2>
+        <section class="panel directory-panel">
+          <div class="directory-toolbar">
+            <div class="directory-toolbar-title"><h2>Usuarios registrados</h2>
+              <p class="muted">Gestiona las cuentas de acceso al sistema.</p>
+            </div>
+            <label class="search-field" for="staffSearch">Buscar usuario
+              <input id="staffSearch" type="search" maxlength="50" placeholder="Nombre de usuario" autocomplete="off">
+            </label>
+          </div>
+          <div id="staffStatus" class="directory-status" aria-live="polite"></div>
+          <div class="table-scroller">
+            <table class="directory-table staff-table" aria-label="Personal autorizado">
+              <thead><tr><th>Usuario</th><th>Rol</th><th>Estado</th><th>Registro</th></tr></thead>
+              <tbody id="staffList"><tr><td colspan="4">Cargando usuarios…</td></tr></tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <span id="staffPageLabel">Página 1</span>
+            <div class="pagination-actions">
+              <button id="staffPrev" class="button button-quiet" type="button" disabled>Anterior</button>
+              <button id="staffNext" class="button button-quiet" type="button" disabled>Siguiente</button>
+            </div>
+          </div>
+        </section>
+        <section id="staffCreatePanel" class="panel form-page-panel extra-form" hidden>
+          <div class="panel-heading"><h2>Nuevo usuario</h2>
+            <button id="cancelStaffButton" class="button button-quiet" type="button">Cancelar</button>
+          </div>
           <form id="staffForm" class="form-stack">
           <label>Usuario<input name="username" pattern="[a-zA-Z0-9_]+" minlength="3" required></label>
           <label>Contraseña inicial<input name="password" type="password" minlength="12" autocomplete="new-password" required></label>
