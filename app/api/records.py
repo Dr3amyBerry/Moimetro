@@ -138,3 +138,31 @@ def close_encounter(encounter_id: int, db: DB, user: Clinician):
                    (now(), encounter_id))
         audit(db, user["id"], "close", "encounter", encounter_id)
     return {"ok": True}
+
+
+class HistoryUpdate(BaseModel):
+    allergies: str = Field(max_length=10000)
+    background: str = Field(max_length=10000)
+
+@router.get("/patients/{patient_id}/history")
+def get_history(patient_id: int, db: DB, user: User):
+    patient_or_404(db, patient_id)
+    record = db.execute("SELECT * FROM patient_histories WHERE patient_id=?", (patient_id,)).fetchone()
+    audit(db, user["id"], "read", "history", patient_id)
+    db.commit()
+    return dict(record) if record else {"patient_id": patient_id, "allergies": "", "background": "",
+                                         "updated_at": None, "updated_by": None}
+
+@router.put("/patients/{patient_id}/history")
+def update_history(patient_id: int, payload: HistoryUpdate, db: DB, user: Clinician):
+    patient_or_404(db, patient_id)
+    with db:
+        db.execute(
+            """INSERT INTO patient_histories(patient_id,allergies,background,updated_at,updated_by)
+               VALUES(?,?,?,?,?)
+               ON CONFLICT(patient_id) DO UPDATE SET
+               allergies=excluded.allergies,background=excluded.background,
+               updated_at=excluded.updated_at,updated_by=excluded.updated_by""",
+            (patient_id, payload.allergies, payload.background, now(), user["id"]))
+        audit(db, user["id"], "update", "history", patient_id)
+    return {"ok": True}
