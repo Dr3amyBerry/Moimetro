@@ -2,7 +2,7 @@
 
 > **Documento rector:** desarrollo tecnológico y documentación técnica/académica del sistema Moímetro.  
 > **Proyecto:** Consultorio Popular Tipo III Las Cayenas.  
-> **Versión del plan:** 1.2 — 2026-10-12.  
+> **Versión del plan:** 1.3 — 2026-10-12.  
 > **Estado global:** prototipo de firmware y aplicación local incorporado en código; validación física, seguridad clínica y puesta en marcha aún pendientes.  
 > **Fuente inicial:** definición funcional y sketch de ESP32 compartidos por el equipo del proyecto.  
 > **Regla de evidencias:** una funcionalidad **no** se marca como completada sin código versionado, pruebas reproducibles y evidencia verificable.
@@ -17,8 +17,8 @@
 |---|---|---|
 | Estructura y dependencias | `requirements.txt`, `app/`, `firmware/platformio.ini`, `tests/` | Código implementado; integración en evaluación |
 | Directorio amplio de pacientes | `app/api/records.py`, `app/storage.py`, `app/static/`, tests de paginación y búsqueda FTS5 | Código implementado: búsqueda indexada, páginas de 25, filtros y formularios separados. Pruebas CI en evaluación; rendimiento con 50k–100k registros y usabilidad real pendientes |
-| Historial y consultas | `patients`, `patient_histories`, `encounters` | Código implementado; no validado con pacientes reales |
-| Usuarios y roles | `app/security.py`, `app/api/auth.py`, `app/manage.py` | Roles básicos implementados; endurecimiento pendiente |
+| Historial y consultas | `patients`, `patient_histories`, `encounters`, `record_revisions` | Revisión transaccional append-only por autor y fecha implementada; validación clínica e integridad criptográfica pendiente |
+| Usuarios y roles | `app/security.py`, `app/api/auth.py`, `app/manage.py`, `app/static/` | Gestión de cuentas, bloqueos, roles, cambio de contraseña y revocación de sesiones implementados; cifrado/seguridad clínica pendiente |
 | Firmware de sensores | `firmware/src/main.cpp` | Compilación CI de versión inicial exitosa; pruebas físicas pendientes |
 | API del ESP32 | `app/api/sensors.py` | Contrato implementado con validación de sesión y estado |
 | Medición vinculada a consulta | `capture_sessions`, `measurements` | Implementación y pruebas automatizadas; integración física pendiente |
@@ -486,3 +486,4 @@ Los demás IDs definidos en las fases también empiezan en `PENDIENTE`; esta tab
 | 2026-10-12 | 1.0 | Creación del plan maestro desde requisitos compartidos y sketch de referencia; se deja todo el trabajo como pendiente hasta obtener evidencia en el repositorio. |
 | 2026-10-12 | 1.1 | Se incorpora estado v0.1 de firmware, API, interfaz local, SQLite, expedientes, seguridad inicial, pruebas CI y documentación, preservando pendientes físicos/clínicos. |
 | 2026-10-12 | 1.2 | Se implementa vía GitHub Actions distribución por instalador `.exe` de Windows 7 SP1+ y sistemas modernos, con almacenamiento persistente por usuario y alta inicial; compatibilidad física y seguridad clínica pendientes. |
+| 2026-10-12 | 1.3 | Controles de seguridad de cuentas, versiones clínicas y publicación por Releases de 3 instaladores `.exe` (beta), sujetos a pruebas automáticas y validación real. |
