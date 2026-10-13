@@ -4,145 +4,234 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>Moímetro · Consultorio local</title>
+  <title>Moímetro | Gestión clínica local</title>
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brand-mark" aria-hidden="true">✚</span><span>Moímetro<small>Consultorio Popular Tipo III Las Cayenas</small></span></div>
-    <div class="topright"><span class="prototype">Prototipo · No validado clínicamente</span><span id="identity"></span><button id="logoutButton" class="ghost" hidden>Salir</button></div>
+    <div class="brand" aria-label="Moímetro">
+      <span class="brand-icon" aria-hidden="true">M</span>
+      <span class="brand-label"><strong>Moímetro</strong><small>Gestión clínica local</small></span>
+    </div>
+    <div class="topbar-actions">
+      <span class="topbar-status"><span class="status-dot" aria-hidden="true"></span>Sistema local</span>
+      <span class="prototype">Prototipo sin validación clínica</span>
+      <span id="identity" class="user-identity"></span>
+      <button id="logoutButton" type="button" class="button button-quiet" hidden>Cerrar sesión</button>
+    </div>
   </header>
+
   <main id="loginScreen" class="login-layout">
-    <section class="panel login-card">
-      <p class="eyebrow">Acceso al sistema local</p><h1>Bienvenido a Moímetro</h1>
-      <p class="muted">Historias clínicas y mediciones en red local. Internet no es necesario.</p>
-      <form id="loginForm">
-        <label>Usuario<input name="username" required autocomplete="username" minlength="3"></label>
-        <label>Contraseña<input name="password" type="password" required autocomplete="current-password"></label>
-        <button class="primary" type="submit">Iniciar sesión</button>
+    <section class="login-card panel">
+      <div class="login-symbol" aria-hidden="true">M</div>
+      <p class="section-kicker">Acceso al sistema</p>
+      <h1>Iniciar sesión</h1>
+      <p class="muted">Consultorio Popular Tipo III Las Cayenas</p>
+      <form id="loginForm" class="form-stack">
+        <label>Usuario<input name="username" autocomplete="username" minlength="3" required></label>
+        <label>Contraseña<input name="password" type="password" autocomplete="current-password" required></label>
+        <button type="submit" class="button button-primary button-wide">Entrar al sistema</button>
       </form>
-      <p class="help">Para crear el primer administrador: <code>python -m app.manage create-admin</code></p>
+      <p class="login-help">Acceso exclusivo para personal autorizado.</p>
     </section>
   </main>
+
   <div id="workScreen" class="workspace" hidden>
-    <aside class="sidebar">
-      <section class="panel">
-        <p class="eyebrow">Recepción</p><h2>Pacientes</h2>
-        <label for="search">Buscar por cédula o nombre</label>
-        <div class="searchbar"><input id="search" placeholder="Ej. 12345678"><button id="searchButton" class="secondary">Buscar</button></div>
-        <div id="patientList" class="item-list" aria-live="polite"></div>
-      </section>
-      <section class="panel">
-        <h2>Nuevo paciente</h2>
-        <form id="patientForm">
-          <label>Documento<select name="document_type"><option>V</option><option>E</option><option>P</option><option>OTRO</option></select></label>
-          <label>Número de cédula<input name="document_number" required minlength="4" maxlength="25" pattern="[a-zA-Z0-9-]+"></label>
-          <label>Nombre completo<input name="full_name" required minlength="2"></label>
-          <label>Fecha de nacimiento<input name="birth_date" type="date"></label>
-          <label>Teléfono (opcional)<input name="phone"></label>
-          <button class="primary" type="submit">Registrar paciente</button>
-        </form>
-      </section>
-      <section id="adminSection" class="panel" hidden>
-        <p class="eyebrow">Administración</p>
-        <h2>Crear cuenta de personal</h2>
-        <form id="staffForm">
-          <label>Usuario<input name="username" required pattern="[a-zA-Z0-9_]+" minlength="3"></label>
-          <label>Contraseña inicial<input name="password" type="password" required minlength="12" autocomplete="new-password"></label>
-          <label>Rol<select name="role">
-            <option value="reception">Recepción</option>
-            <option value="nurse">Enfermería</option>
-            <option value="clinician">Médico</option>
-            <option value="admin">Administrador</option>
-          </select></label>
-          <button class="secondary" type="submit">Crear usuario</button>
-        </form>
-      </section>
-    </aside>
-    <div class="content">
-      <section class="panel patient-header">
-        <div><p class="eyebrow">Expediente local</p><h1 id="patientTitle">Seleccione un paciente</h1><p id="patientDetails" class="muted">Utilice la búsqueda o cree un registro nuevo.</p></div>
-      </section>
-      <div id="patientWork" hidden>
-        <section class="panel">
-          <h2>Datos personales</h2>
-          <form id="patientEditForm">
-            <div class="columns">
-              <label>Nombre completo<input name="full_name" required minlength="2"></label>
-              <label>Fecha de nacimiento<input type="date" name="birth_date"></label>
-            </div>
-            <label>Teléfono de contacto<input name="phone"></label>
-            <button class="secondary" type="submit">Guardar datos del paciente</button>
-          </form>
-        </section>
-        <section class="panel">
-          <h2>Antecedentes y alergias</h2>
-          <p class="muted">La información de este apartado debe ser verificada por el personal autorizado.</p>
-          <form id="historyForm">
-            <div class="columns">
-              <label>Alergias<textarea name="allergies" rows="3" placeholder="Describir alergias conocidas; no asumir ausencia"></textarea></label>
-              <label>Antecedentes clínicos<textarea name="background" rows="3" placeholder="Antecedentes aportados y confirmados por el personal"></textarea></label>
-            </div>
-            <button class="secondary" type="submit">Guardar antecedentes</button>
-          </form>
-        </section>
-        <div class="columns">
-          <section class="panel">
-            <h2>Iniciar consulta</h2>
-            <form id="encounterForm">
-              <label>Motivo de consulta<textarea name="reason" required minlength="3" rows="2" placeholder="Motivo informado por el paciente"></textarea></label>
-              <button class="primary" type="submit">Abrir consulta</button>
-            </form>
-          </section>
-          <section class="panel">
-            <h2>Historial</h2>
-            <div id="encounterList" class="item-list"></div>
-          </section>
+    <aside class="sidebar" aria-label="Panel de pacientes">
+      <div class="sidebar-title">
+        <span class="sidebar-label">ÁREA DE TRABAJO</span>
+        <h2>Pacientes</h2>
+      </div>
+
+      <div class="sidebar-section">
+        <label for="search" class="sidebar-field-label">Buscar paciente</label>
+        <div class="searchbar">
+          <input id="search" type="search" placeholder="Cédula o nombre" autocomplete="off">
+          <button id="searchButton" class="button button-search" type="button" aria-label="Buscar">Buscar</button>
         </div>
-        <section id="encounterWork" class="panel" hidden>
-          <div class="section-heading"><div><p class="eyebrow" id="encounterMeta"></p><h2>Consulta seleccionada</h2></div><button id="closeEncounterButton" class="secondary">Cerrar consulta</button></div>
-          <div class="notice caution"><strong>Triaje deshabilitado.</strong> No se asignan prioridades automáticas ni se sustituyen decisiones del personal médico.</div>
-          <div class="columns">
-            <section class="nested">
-              <h3>Captura de sensores</h3>
-              <p class="muted">Inicie una sesión para que el ESP32 vincule sus mediciones con esta consulta. Cada lectura requiere revisión.</p>
-              <p id="captureState" class="status-line">Sin sesión activa</p>
-              <div class="button-row"><button id="startCaptureButton" class="primary">Iniciar captura</button><button id="stopCaptureButton" class="secondary">Detener captura</button><button id="refreshReadingsButton" class="secondary">Actualizar</button></div>
+        <div id="patientList" class="item-list" aria-live="polite"></div>
+      </div>
+
+      <details id="newPatientDetails" class="sidebar-disclosure">
+        <summary><span aria-hidden="true">＋</span> Nuevo paciente</summary>
+        <form id="patientForm" class="form-stack sidebar-form">
+          <label>Tipo de documento
+            <select name="document_type"><option>V</option><option>E</option><option>P</option><option>OTRO</option></select>
+          </label>
+          <label>Número<input name="document_number" required minlength="4" maxlength="25" pattern="[a-zA-Z0-9-]+"></label>
+          <label>Nombre completo<input name="full_name" required minlength="2"></label>
+          <label>Nacimiento<input name="birth_date" type="date"></label>
+          <label>Teléfono (opcional)<input name="phone"></label>
+          <button type="submit" class="button button-sidebar">Registrar paciente</button>
+        </form>
+      </details>
+
+      <details id="adminSection" class="sidebar-disclosure" hidden>
+        <summary><span aria-hidden="true">◇</span> Personal</summary>
+        <form id="staffForm" class="form-stack sidebar-form">
+          <label>Usuario<input name="username" pattern="[a-zA-Z0-9_]+" minlength="3" required></label>
+          <label>Contraseña inicial<input name="password" type="password" minlength="12" autocomplete="new-password" required></label>
+          <label>Rol
+            <select name="role">
+              <option value="reception">Recepción</option>
+              <option value="nurse">Enfermería</option>
+              <option value="clinician">Médico</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </label>
+          <button type="submit" class="button button-sidebar">Crear usuario</button>
+        </form>
+      </details>
+
+      <p class="sidebar-footnote">Consultorio Popular Tipo III<br>Las Cayenas</p>
+    </aside>
+
+    <main class="content">
+      <header class="patient-header panel">
+        <div>
+          <p class="section-kicker">EXPEDIENTE</p>
+          <h1 id="patientTitle">Pacientes</h1>
+          <p id="patientDetails" class="muted">Selecciona un paciente para comenzar.</p>
+        </div>
+        <span class="header-tag">Registro local</span>
+      </header>
+
+      <section id="emptyState" class="empty-state panel">
+        <div class="empty-icon" aria-hidden="true">▤</div>
+        <h2>Selecciona un paciente</h2>
+        <p>Busca por cédula o registra uno nuevo desde el panel lateral.</p>
+      </section>
+
+      <div id="patientWork" hidden>
+        <nav class="workspace-tabs" aria-label="Secciones del expediente">
+          <button class="tab-button active" data-view="overview" type="button" aria-current="page">Consultas</button>
+          <button class="tab-button" data-view="profile" type="button">Datos del paciente</button>
+          <button class="tab-button" data-view="consultation" type="button">Consulta activa</button>
+        </nav>
+
+        <div id="viewOverview" class="view-panel">
+          <div class="overview-grid">
+            <section class="panel">
+              <div class="panel-heading">
+                <div><p class="section-kicker">ATENCIÓN</p><h2>Nueva consulta</h2></div>
+              </div>
+              <form id="encounterForm" class="form-stack">
+                <label>Motivo de consulta
+                  <textarea name="reason" rows="3" minlength="3" placeholder="Describe brevemente el motivo" required></textarea>
+                </label>
+                <button type="submit" class="button button-primary">Abrir consulta</button>
+              </form>
             </section>
-            <section class="nested">
-              <h3>Agregar medición manual</h3>
-              <form id="manualForm">
-                <label>Variable<select name="kind">
-                  <option value="body_temp_c">Temperatura corporal (°C)</option>
-                  <option value="pulse_bpm">Frecuencia cardíaca (BPM)</option>
-                  <option value="spo2_pct">SpO₂ de instrumento externo (%)</option>
-                  <option value="ambient_temp_c">Temperatura ambiente (°C)</option>
-                  <option value="humidity_pct">Humedad (%)</option>
-                </select></label>
-                <label>Valor medido<input type="number" name="value" required step="any"></label>
-                <label>Origen / instrumento empleado<textarea name="notes" minlength="8" required rows="2" placeholder="Identifique instrumento y contexto de lectura"></textarea></label>
-                <button class="secondary" type="submit">Registrar medición manual</button>
+            <section class="panel">
+              <div class="panel-heading">
+                <div><p class="section-kicker">HISTORIAL</p><h2>Consultas registradas</h2></div>
+              </div>
+              <div id="encounterList" class="item-list encounter-list"></div>
+            </section>
+          </div>
+        </div>
+
+        <div id="viewProfile" class="view-panel" hidden>
+          <div class="profile-grid">
+            <section class="panel">
+              <div class="panel-heading"><h2>Datos personales</h2></div>
+              <form id="patientEditForm" class="form-stack">
+                <label>Nombre completo<input name="full_name" minlength="2" required></label>
+                <label>Fecha de nacimiento<input name="birth_date" type="date"></label>
+                <label>Teléfono<input name="phone"></label>
+                <div class="form-actions"><button type="submit" class="button button-primary">Guardar cambios</button></div>
+              </form>
+            </section>
+            <section class="panel">
+              <div class="panel-heading"><h2>Antecedentes y alergias</h2></div>
+              <form id="historyForm" class="form-stack">
+                <label>Alergias<textarea name="allergies" rows="4" placeholder="Información registrada"></textarea></label>
+                <label>Antecedentes<textarea name="background" rows="4" placeholder="Historial relevante"></textarea></label>
+                <div class="form-actions"><button type="submit" class="button button-primary">Guardar antecedentes</button></div>
               </form>
             </section>
           </div>
-          <h3>Lecturas y revisión</h3>
-          <div class="table-scroller"><table><thead><tr><th>Momento</th><th>Variable</th><th>Valor</th><th>Origen</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="measurementList"><tr><td colspan="6">Sin lecturas registradas.</td></tr></tbody></table></div>
-          <section class="nested clinical-panel">
-            <h3>Evolución clínica</h3>
-            <p class="muted">Solo un profesional con rol clínico puede modificar estos campos.</p>
-            <form id="clinicalForm">
-              <label>Evaluación<textarea name="assessment" rows="3"></textarea></label>
-              <label>Diagnóstico<textarea name="diagnosis" rows="2"></textarea></label>
-              <label>Tratamiento<textarea name="treatment" rows="2"></textarea></label>
-              <button class="primary" type="submit">Guardar evolución</button>
-            </form>
+        </div>
+
+        <div id="viewEncounter" class="view-panel" hidden>
+          <div id="encounterEmpty" class="empty-state panel">
+            <div class="empty-icon" aria-hidden="true">▤</div>
+            <h2>No hay una consulta seleccionada</h2>
+            <p>Abre una consulta o selecciónala en el historial.</p>
+            <button type="button" id="backToVisitsButton" class="button button-primary">Ver consultas</button>
+          </div>
+
+          <section id="encounterWork" hidden>
+            <div class="panel consultation-heading">
+              <div>
+                <p class="section-kicker">CONSULTA</p>
+                <h2>Registro de atención</h2>
+                <p id="encounterMeta" class="muted"></p>
+              </div>
+              <button id="closeEncounterButton" class="button button-secondary" type="button">Cerrar consulta</button>
+            </div>
+
+            <div class="consultation-grid">
+              <section class="panel">
+                <div class="panel-heading"><h3>Mediciones</h3></div>
+                <p id="captureState" class="capture-status">Sin sesión activa</p>
+                <div class="button-row">
+                  <button id="startCaptureButton" class="button button-primary" type="button">Iniciar captura</button>
+                  <button id="stopCaptureButton" class="button button-secondary" type="button">Detener</button>
+                  <button id="refreshReadingsButton" class="button button-quiet" type="button">Actualizar</button>
+                </div>
+                <details class="inline-disclosure">
+                  <summary>Ingresar una medición manual</summary>
+                  <form id="manualForm" class="form-stack manual-form">
+                    <label>Variable
+                      <select name="kind">
+                        <option value="body_temp_c">Temperatura corporal (°C)</option>
+                        <option value="pulse_bpm">Frecuencia cardíaca (BPM)</option>
+                        <option value="spo2_pct">SpO₂ de instrumento externo (%)</option>
+                        <option value="ambient_temp_c">Temperatura ambiente (°C)</option>
+                        <option value="humidity_pct">Humedad (%)</option>
+                      </select>
+                    </label>
+                    <label>Valor<input name="value" type="number" step="any" required></label>
+                    <label>Instrumento / procedencia
+                      <textarea name="notes" rows="2" minlength="8" placeholder="Identifica el instrumento" required></textarea>
+                    </label>
+                    <button type="submit" class="button button-secondary">Registrar medición</button>
+                  </form>
+                </details>
+              </section>
+
+              <section class="panel">
+                <div class="panel-heading"><h3>Evolución clínica</h3></div>
+                <form id="clinicalForm" class="form-stack">
+                  <label>Evaluación<textarea name="assessment" rows="3"></textarea></label>
+                  <label>Diagnóstico<textarea name="diagnosis" rows="2"></textarea></label>
+                  <label>Tratamiento<textarea name="treatment" rows="2"></textarea></label>
+                  <button type="submit" class="button button-primary">Guardar evolución</button>
+                </form>
+              </section>
+            </div>
+
+            <section class="panel readings-panel">
+              <div class="panel-heading">
+                <h3>Lecturas recibidas</h3>
+                <span class="table-note">Revisión manual</span>
+              </div>
+              <div class="table-scroller">
+                <table>
+                  <thead><tr><th>Momento</th><th>Variable</th><th>Valor</th><th>Origen</th><th>Estado</th><th>Acción</th></tr></thead>
+                  <tbody id="measurementList"><tr><td colspan="6">Sin lecturas registradas.</td></tr></tbody>
+                </table>
+              </div>
+              <p class="clinical-note">Triaje automático no habilitado. Las lecturas requieren verificación del personal.</p>
+            </section>
           </section>
-        </section>
+        </div>
       </div>
-    </div>
+    </main>
   </div>
+
   <div id="toast" role="status" aria-live="polite"></div>
-  <footer>Moímetro · Prototipo técnico. Usar exclusivamente datos ficticios hasta completar seguridad, pruebas y revisión clínica.</footer>
   <script src="/static/app.js" defer></script>
 </body>
 </html>
