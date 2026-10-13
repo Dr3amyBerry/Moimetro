@@ -1,6 +1,7 @@
 """Patient registry and longitudinal encounter records. Offline only."""
 from __future__ import annotations
 import sqlite3
+import re
 from datetime import date
 from typing import Literal, Optional
 from typing_extensions import Annotated
@@ -66,12 +67,27 @@ def patient_directory(
     search = q.strip()
     filters = []
     values = []
+    # Full text index supports surnames, accented names and partial documents
+    # without scanning the complete patients table on each search.
+    typed_doc = re.fullmatch(r"([VEve])[-\\s]+(\\d+)", search)
+    if typed_doc:
+        prefix_type = typed_doc.group(1).upper()
+        if document_type and document_type != prefix_type:
+            filters.append("0")
+        else:
+            document_type = prefix_type
+        search = typed_doc.group(2)
     if search:
-        # Treat %, _ and backslash literally in LIKE, rather than as wildcards.
-        escaped = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-        prefix = escaped + "%"
-        filters.append("(p.full_name LIKE ? ESCAPE '\\' OR p.document_number LIKE ? ESCAPE '\\')")
-        values.extend((prefix, prefix))
+        terms = re.findall(r"[^\\W_]+", search, re.UNICODE)
+        if terms:
+            match_query = " AND ".join('"{}"*'.format(t.replace('"', '""'))
+                                       for t in terms[:12])
+            filters.append(
+                "p.id IN (SELECT rowid FROM patients_fts WHERE patients_fts MATCH ?)"
+            )
+            values.append(match_query)
+        else:
+            filters.append("0")
     if document_type is not None:
         filters.append("p.document_type = ?")
         values.append(document_type)
