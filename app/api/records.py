@@ -125,15 +125,16 @@ def update_encounter(encounter_id: int, payload: ClinicalUpdate, db: DB, user: C
 
 @router.post("/encounters/{encounter_id}/close")
 def close_encounter(encounter_id: int, db: DB, user: Clinician):
-    encounter = encounter_or_404(db, encounter_id)
-    if encounter["status"] != "open":
-        raise HTTPException(409, "Consulta ya cerrada.")
-    active = db.execute(
-        "SELECT COUNT(*) FROM capture_sessions WHERE encounter_id=? AND ended_at IS NULL",
-        (encounter_id,)).fetchone()[0]
-    if active:
-        raise HTTPException(409, "Finalice la captura antes de cerrar.")
     with db:
+        db.execute("BEGIN IMMEDIATE")
+        encounter = encounter_or_404(db, encounter_id)
+        if encounter["status"] != "open":
+            raise HTTPException(409, "Consulta ya cerrada.")
+        active = db.execute(
+            "SELECT COUNT(*) FROM capture_sessions WHERE encounter_id=? AND ended_at IS NULL",
+            (encounter_id,)).fetchone()[0]
+        if active:
+            raise HTTPException(409, "Finalice la captura antes de cerrar.")
         db.execute("UPDATE encounters SET status='closed',closed_at=? WHERE id=?",
                    (now(), encounter_id))
         audit(db, user["id"], "close", "encounter", encounter_id)
