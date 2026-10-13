@@ -157,45 +157,8 @@
           </div>
           <button id="newStaffButton" class="button button-primary" type="button">+ Nuevo usuario</button>
         </header>
-        <section id="staffManagePanel" class="panel form-page-panel extra-form" hidden>
-          <div class="panel-heading"><h2 id="staffManageTitle">Administrar usuario</h2>
-            <button id="cancelStaffManage" class="button button-quiet" type="button">Cerrar</button>
-          </div>
-          <form id="staffManageForm" class="form-stack">
-            <label>Rol
-              <select name="role">
-                <option value="reception">Recepción</option><option value="nurse">Enfermería</option>
-                <option value="clinician">Médico</option><option value="admin">Administrador</option>
-              </select>
-            </label>
-            <label>Acceso
-              <select name="active"><option value="true">Activo</option><option value="false">Bloqueado</option></select>
-            </label>
-            <label>Contraseña nueva (opcional, mínimo 12 caracteres)
-              <input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="256">
-            </label>
-            <p class="muted">Al guardar, se cierran las sesiones de la cuenta cuando cambien sus permisos o contraseña.</p>
-            <button class="button button-primary" type="submit">Guardar acceso</button>
-          </form>
-        </section>
-        <section id="staffCreatePanel" class="panel form-page-panel extra-form" hidden>
-          <div class="panel-heading"><h2>Nuevo usuario</h2>
-            <button id="cancelStaffButton" class="button button-quiet" type="button">Cancelar</button>
-          </div>
-          <form id="staffForm" class="form-stack">
-          <label>Usuario<input name="username" pattern="[a-zA-Z0-9_]+" minlength="3" required></label>
-          <label>Contraseña inicial<input name="password" type="password" minlength="12" autocomplete="new-password" required></label>
-          <label>Rol
-            <select name="role">
-              <option value="reception">Recepción</option>
-              <option value="nurse">Enfermería</option>
-              <option value="clinician">Médico</option>
-              <option value="admin">Administrador</option>
-            </select>
-          </label>
-          <button type="submit" class="button button-sidebar">Crear usuario</button>
-        </form>
-        </section>
+
+
         <section class="panel directory-panel">
           <div class="directory-toolbar">
             <div class="directory-toolbar-title"><h2>Usuarios registrados</h2>
@@ -335,25 +298,10 @@
                   <button id="stopCaptureButton" class="button button-secondary" type="button">Detener</button>
                   <button id="refreshReadingsButton" class="button button-quiet" type="button">Actualizar</button>
                 </div>
-                <details class="inline-disclosure">
-                  <summary>Ingresar una medición manual</summary>
-                  <form id="manualForm" class="form-stack manual-form">
-                    <label>Variable
-                      <select name="kind">
-                        <option value="body_temp_c">Temperatura corporal (°C)</option>
-                        <option value="pulse_bpm">Frecuencia cardíaca (BPM)</option>
-                        <option value="spo2_pct">SpO₂ de instrumento externo (%)</option>
-                        <option value="ambient_temp_c">Temperatura ambiente (°C)</option>
-                        <option value="humidity_pct">Humedad (%)</option>
-                      </select>
-                    </label>
-                    <label>Valor<input name="value" type="number" step="any" required></label>
-                    <label>Instrumento / procedencia
-                      <textarea name="notes" rows="2" minlength="8" placeholder="Identifica el instrumento" required></textarea>
-                    </label>
-                    <button type="submit" class="button button-secondary">Registrar medición</button>
-                  </form>
-                </details>
+                <div class="manual-action">
+                  <button id="manualMeasureButton" class="button button-quiet" type="button">+ Ingresar medición manual</button>
+                  <p class="muted">Utiliza un instrumento externo identificado.</p>
+                </div>
               </section>
 
               <section class="panel">
@@ -375,11 +323,18 @@
                 <h3>Lecturas recibidas</h3>
                 <span class="table-note">Revisión manual</span>
               </div>
-              <div class="table-scroller">
+              <div class="table-scroller reading-scroller" tabindex="0" aria-label="Tabla de lecturas, desplazamiento interno">
                 <table>
                   <thead><tr><th>Momento</th><th>Variable</th><th>Valor</th><th>Origen</th><th>Estado</th><th>Acción</th></tr></thead>
                   <tbody id="measurementList"><tr><td colspan="6">Sin lecturas registradas.</td></tr></tbody>
                 </table>
+              </div>
+              <div class="pagination readings-pagination" aria-label="Páginas de mediciones">
+                <span id="measurementPageLabel">Página 1</span>
+                <div class="pagination-actions">
+                  <button id="measurementPrev" class="button button-quiet" type="button" disabled>Anterior</button>
+                  <button id="measurementNext" class="button button-quiet" type="button" disabled>Siguiente</button>
+                </div>
               </div>
               <p class="clinical-note">Triaje automático no habilitado. Las lecturas requieren verificación del personal.</p>
             </section>
@@ -390,7 +345,74 @@
       </section>
     </main>
   </div>
-  <section id="accountPanel" class="account-overlay" hidden>
+  <section id="staffManagePanel" class="account-overlay" role="dialog" aria-modal="true" aria-labelledby="staffManageTitle" hidden>
+    <div class="panel account-modal">
+      <div class="panel-heading"><h2 id="staffManageTitle">Administrar usuario</h2>
+            <button id="cancelStaffManage" class="button button-quiet" type="button">Cerrar</button>
+          </div>
+          <form id="staffManageForm" class="form-stack">
+            <label>Rol
+              <select name="role">
+                <option value="reception">Recepción</option><option value="nurse">Enfermería</option>
+                <option value="clinician">Médico</option><option value="admin">Administrador</option>
+              </select>
+            </label>
+            <label>Acceso
+              <select name="active"><option value="true">Activo</option><option value="false">Bloqueado</option></select>
+            </label>
+            <label>Contraseña nueva (opcional, mínimo 12 caracteres)
+              <input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="256">
+            </label>
+            <p class="muted">Al guardar, se cierran las sesiones de la cuenta cuando cambien sus permisos o contraseña.</p>
+            <button class="button button-primary" type="submit">Guardar acceso</button>
+          </form>
+    </div>
+  </section>
+  <section id="staffCreatePanel" class="account-overlay" role="dialog" aria-modal="true" aria-label="Nuevo usuario" hidden>
+    <div class="panel account-modal">
+      <div class="panel-heading"><h2>Nuevo usuario</h2>
+            <button id="cancelStaffButton" class="button button-quiet" type="button">Cancelar</button>
+          </div>
+          <form id="staffForm" class="form-stack">
+          <label>Usuario<input name="username" pattern="[a-zA-Z0-9_]+" minlength="3" required></label>
+          <label>Contraseña inicial<input name="password" type="password" minlength="12" autocomplete="new-password" required></label>
+          <label>Rol
+            <select name="role">
+              <option value="reception">Recepción</option>
+              <option value="nurse">Enfermería</option>
+              <option value="clinician">Médico</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </label>
+          <button type="submit" class="button button-sidebar">Crear usuario</button>
+        </form>
+    </div>
+  </section>
+  <section id="manualMeasureDialog" class="account-overlay" role="dialog" aria-modal="true" aria-labelledby="manualMeasureTitle" hidden>
+    <div class="panel account-modal">
+      <div class="panel-heading">
+        <h2 id="manualMeasureTitle">Nueva medición manual</h2>
+        <button id="cancelManualMeasure" class="button button-quiet" type="button">Cancelar</button>
+      </div>
+      <form id="manualForm" class="form-stack">
+                    <label>Variable
+                      <select name="kind">
+                        <option value="body_temp_c">Temperatura corporal (°C)</option>
+                        <option value="pulse_bpm">Frecuencia cardíaca (BPM)</option>
+                        <option value="spo2_pct">SpO₂ de instrumento externo (%)</option>
+                        <option value="ambient_temp_c">Temperatura ambiente (°C)</option>
+                        <option value="humidity_pct">Humedad (%)</option>
+                      </select>
+                    </label>
+                    <label>Valor<input name="value" type="number" step="any" required></label>
+                    <label>Instrumento / procedencia
+                      <textarea name="notes" rows="2" minlength="8" placeholder="Identifica el instrumento" required></textarea>
+                    </label>
+                    <button type="submit" class="button button-secondary">Registrar medición</button>
+                  </form>
+    </div>
+  </section>
+  <section id="accountPanel" class="account-overlay" role="dialog" aria-modal="true" aria-label="Cambiar mi contraseña" hidden>
     <div class="panel account-modal">
       <div class="panel-heading"><h2>Cambiar mi contraseña</h2>
         <button id="closeAccountPanel" class="button button-quiet" type="button">Cancelar</button>
