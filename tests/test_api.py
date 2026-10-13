@@ -552,3 +552,47 @@ def test_clinical_revisions_atomic_and_privileged(client):
         with pytest.raises(sqlite3.IntegrityError, match="append-only"):
             db.execute("UPDATE record_revisions SET reason='alterada' WHERE id=?",
                        (patient_edit["id"],))
+
+
+def test_measurements_seek_pagination_stays_bounded(client):
+    headers = login(client)
+    eid = visit(client, headers, patient(client, headers))
+    from app.storage import connect, now
+    with connect() as db:
+        db.executemany(
+            """INSERT INTO measurements(encounter_id,kind,value,unit,quality,
+               origin,status,notes,received_at) VALUES(?,?,?,?,?,?,?,?,?)""",
+            [(eid, "body_temp_c", 36.5, "°C", "ok",
+              "manual", "pending", "Dato sintético", now())
+             for _ in range(79)]
+        )
+
+    seen = []
+    before = None
+    for _ in range(4):
+        params = {"encounter_id": eid, "limit": 25}
+        if before is not None:
+            params["before"] = before
+        response = client.get("/api/measurements", params=params,
+                              headers=headers)
+        assert response.status_code == 200, response.text
+        items = response.json()
+        assert len(items) <= 25
+        seen.extend(item["id"] for item in items)
+        before = items[-1]["id"] if items else None
+        if len(items) < 25:
+            break
+    assert len(seen) == 79 and len(set(seen)) == 79
+    assert seen == sorted(seen, reverse=True)
+    assert client.get("/api/measurements", params={
+        "encounter_id": eid, "limit": 201
+    }, headers=headers).status_code == 422
+    assert client.get("/api/measurements", params={
+        "encounter_id": eid, "before": -8
+    }, headers=headers).status_code == 422
+    assert client.get("/api/measurements", params={
+        "encounter_id": eid
+    }).status_code == 401
+    assert len(client.get("/api/measurements", params={
+        "encounter_id": eid
+    }, headers=headers).json()) == 79  # Existing API contract preserved.
