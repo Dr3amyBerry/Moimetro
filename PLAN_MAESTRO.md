@@ -11,21 +11,21 @@
 
 ## Estado de implementación — primera tanda v0.1
 
-> **Evidencia:** archivos versionados en \`main\`, tests de integración en \`tests/test_api.py\`, y workflow [API tests](https://github.com/Dr3amyBerry/Moimetro/actions/workflows/test.yml). La aprobación de un build **no equivale** a validación clínica o de hardware. El diagnóstico de la sección 2 describe la línea base del repositorio **cuando se creó el plan**, no su estado posterior.
+> **Evidencia:** archivos versionados en `main`, tests de integración en `tests/test_api.py`, y workflow [API tests](https://github.com/Dr3amyBerry/Moimetro/actions/workflows/test.yml). La aprobación de un build **no equivale** a validación clínica o de hardware. El diagnóstico de la sección 2 describe la línea base del repositorio **cuando se creó el plan**, no su estado posterior.
 
 | Área | Evidencia implementada | Estado actual |
 |---|---|---|
-| Estructura y dependencias | \`requirements.txt\`, \`app/\`, \`firmware/platformio.ini\`, \`tests/\` | Código implementado; integración en evaluación |
-| Pacientes por cédula | \`app/api/records.py\` y \`app/static/\` | Implementado y con pruebas API; pruebas operativas pendientes |
-| Historial y consultas | \`patients\`, \`patient_histories\`, \`encounters\` | Código implementado; no validado con pacientes reales |
-| Usuarios y roles | \`app/security.py\`, \`app/api/auth.py\`, \`app/manage.py\` | Roles básicos implementados; endurecimiento pendiente |
-| Firmware de sensores | \`firmware/src/main.cpp\` | Compilación CI de versión inicial exitosa; pruebas físicas pendientes |
-| API del ESP32 | \`app/api/sensors.py\` | Contrato implementado con validación de sesión y estado |
-| Medición vinculada a consulta | \`capture_sessions\`, \`measurements\` | Implementación y pruebas automatizadas; integración física pendiente |
+| Estructura y dependencias | `requirements.txt`, `app/`, `firmware/platformio.ini`, `tests/` | Código implementado; integración en evaluación |
+| Pacientes por cédula | `app/api/records.py` y `app/static/` | Implementado y con pruebas API; pruebas operativas pendientes |
+| Historial y consultas | `patients`, `patient_histories`, `encounters` | Código implementado; no validado con pacientes reales |
+| Usuarios y roles | `app/security.py`, `app/api/auth.py`, `app/manage.py` | Roles básicos implementados; endurecimiento pendiente |
+| Firmware de sensores | `firmware/src/main.cpp` | Compilación CI de versión inicial exitosa; pruebas físicas pendientes |
+| API del ESP32 | `app/api/sensors.py` | Contrato implementado con validación de sesión y estado |
+| Medición vinculada a consulta | `capture_sessions`, `measurements` | Implementación y pruebas automatizadas; integración física pendiente |
 | Detección/SpO₂ | SpO₂ simulado eliminado; API rechaza SpO₂ del ESP32 | Mitigación del falso valor aplicada; SpO₂ real **no implementado** |
-| Triaje | Ruta informa \`not_validated\` sin prioridad | **Bloqueado hasta revisión clínica** |
-| Respaldo | \`python -m app.manage backup\` y \`verify-backup\` | Respaldo y verificación inicial; restauración cifrada/ensayada pendiente |
-| Documentación paralela | \`docs/ARCHITECTURE.md\`, \`SEGURIDAD.md\`, \`VALIDACION.md\`, \`DOCUMENTACION_ROADMAP.md\` | Borradores y matrices preparados; informes definitivos pendientes |
+| Triaje | Ruta informa `not_validated` sin prioridad | **Bloqueado hasta revisión clínica** |
+| Respaldo | `python -m app.manage backup` y `verify-backup` | Respaldo y verificación inicial; restauración cifrada/ensayada pendiente |
+| Documentación paralela | `docs/ARCHITECTURE.md`, `SEGURIDAD.md`, `VALIDACION.md`, `DOCUMENTACION_ROADMAP.md` | Borradores y matrices preparados; informes definitivos pendientes |
 
 ### Interpretación de estados
 
