@@ -92,4 +92,8 @@ def test_enterprise_directory_replaces_demo_sidebar():
     assert "VISIT_LIMIT = 15" in JS
     assert "directory.next" in JS
     assert "visits.next" in JS
+    assert "staffList" in page.ids
+    assert "staffNext" in page.ids
+    assert "staffCreatePanel" in page.ids
+    assert '/api/admin/users?' in JS
     assert "textContent = patient.full_name" in JS
