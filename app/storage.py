@@ -8,8 +8,11 @@ from pathlib import Path
 def now():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
+def db_path() -> Path:
+    return Path(os.environ.get("MOIMETRO_DB_PATH", "data/moimetro.sqlite3")).expanduser().resolve()
+
 def connect():
-    file = Path(os.environ.get("MOIMETRO_DB_PATH", "data/moimetro.sqlite3")).expanduser().resolve()
+    file = db_path()
     file.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(str(file), timeout=10, check_same_thread=False)
     db.row_factory = sqlite3.Row
