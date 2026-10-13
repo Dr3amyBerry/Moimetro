@@ -93,12 +93,18 @@ def wait_for_ready(timeout_seconds=12):
 def main():
     multiprocessing.freeze_support()
     if "--self-test" in sys.argv:
-        from app.main import app
-        from app.main import static_dir
-        if not (static_dir / "index.html").is_file():
-            raise SystemExit("No se empaquetó el frontend.")
-        if not any(route.path == "/api/health" for route in app.routes):
-            raise SystemExit("Falta API local.")
+        try:
+            from app.main import app, static_dir
+            if not (static_dir / "index.html").is_file():
+                raise RuntimeError("No se empaquetó el frontend.")
+            if not any(route.path == "/api/health" for route in app.routes):
+                raise RuntimeError("Falta API local.")
+        except Exception:
+            # CI GUI executable has no console. Keep a sanitized diagnostic.
+            import tempfile
+            logfile = Path(tempfile.gettempdir()) / "Moimetro-selftest-error.log"
+            logfile.write_text(traceback.format_exc(), encoding="utf-8")
+            raise SystemExit(1)
         return
     if os.name != "nt":
         raise SystemExit("El instalador de escritorio es para Windows.")
