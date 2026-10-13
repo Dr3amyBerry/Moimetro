@@ -273,7 +273,8 @@ async function loadStaff() {
     const open = document.createElement("button");
     open.type = "button";
     open.className = "button button-table";
-    open.textContent = "Administrar";
+    open.textContent = person.username === state.username ? "Mi cuenta" : "Administrar";
+    open.disabled = person.username === state.username;
     open.setAttribute("aria-label", "Administrar usuario " + person.username);
     open.addEventListener("click", () => {
       managedStaff = person;
@@ -778,6 +779,7 @@ el("clinicalForm").addEventListener("submit", safe(async e => {
     })
   });
   toast("Evolución clínica guardada.");
+  el("clinicalForm").elements.reason.value = "";
   await selectEncounter(state.encounter.id);
 }));
 el("startCaptureButton").addEventListener("click", safe(async () => {
