@@ -99,6 +99,82 @@ def create_staff(payload: StaffCreate, db: DB, admin: Admin):
         raise HTTPException(409, "Usuario duplicado.")
     return {"id": cursor.lastrowid, "role": payload.role, "username": payload.username}
 
+class PasswordChange(BaseModel):
+    current_password: str = Field(min_length=1, max_length=256)
+    new_password: str = Field(min_length=12, max_length=256)
+
+
+@router.post("/auth/change-password")
+def change_own_password(payload: PasswordChange, db: DB, user: User):
+    """Require the current secret and invalidate *all* active sessions."""
+    account = db.execute("SELECT password_hash FROM users WHERE id=?", (user["id"],)).fetchone()
+    if not account or not verify_password(payload.current_password, account["password_hash"]):
+        raise HTTPException(403, "Contraseña actual incorrecta.")
+    if payload.current_password == payload.new_password:
+        raise HTTPException(422, "La contraseña nueva debe ser diferente.")
+    replacement = password_hash(payload.new_password)
+    with db:
+        db.execute("BEGIN IMMEDIATE")
+        db.execute("UPDATE users SET password_hash=? WHERE id=?", (replacement, user["id"]))
+        db.execute("DELETE FROM tokens WHERE user_id=?", (user["id"],))
+        audit(db, user["id"], "change_password", "user", user["id"])
+    return {"ok": True, "sessions_revoked": True}
+
+
+class StaffEdit(BaseModel):
+    role: Optional[Literal["admin", "reception", "nurse", "clinician"]] = None
+    active: Optional[bool] = None
+    password: Optional[str] = Field(default=None, min_length=12, max_length=256)
+
+
+@router.patch("/admin/users/{user_id}")
+def update_staff(user_id: int, payload: StaffEdit, db: DB, admin: Admin):
+    """Only admins can change staff; prevent self-lockout and revoke sessions."""
+    if payload.role is None and payload.active is None and payload.password is None:
+        raise HTTPException(422, "Indique un cambio.")
+    new_hash = password_hash(payload.password) if payload.password is not None else None
+    with db:
+        db.execute("BEGIN IMMEDIATE")
+        target = db.execute(
+            "SELECT id,username,role,active FROM users WHERE id=?", (user_id,)
+        ).fetchone()
+        if not target:
+            raise HTTPException(404, "Cuenta inexistente.")
+        role = payload.role if payload.role is not None else target["role"]
+        active = int(payload.active) if payload.active is not None else int(target["active"])
+        if user_id == admin["id"]:
+            if role != target["role"] or not active:
+                raise HTTPException(409, "No puede quitarse su acceso administrador.")
+            if new_hash is not None:
+                raise HTTPException(409, "Cambie su contraseña desde su perfil.")
+        if target["role"] == "admin" and target["active"] and (
+            role != "admin" or not active
+        ):
+            count = db.execute(
+                "SELECT COUNT(*) FROM users WHERE role='admin' AND active=1"
+            ).fetchone()[0]
+            if count <= 1:
+                raise HTTPException(409, "Debe permanecer un administrador activo.")
+        if new_hash is not None:
+            db.execute(
+                "UPDATE users SET role=?,active=?,password_hash=? WHERE id=?",
+                (role, active, new_hash, user_id),
+            )
+        else:
+            db.execute(
+                "UPDATE users SET role=?,active=? WHERE id=?",
+                (role, active, user_id),
+            )
+        changed_access = (role != target["role"] or active != target["active"] or
+                          new_hash is not None)
+        if changed_access:
+            db.execute("DELETE FROM tokens WHERE user_id=?", (user_id,))
+        audit(db, admin["id"], "update_access", "user", user_id)
+    return {"id": user_id, "username": target["username"],
+            "role": role, "active": bool(active),
+            "sessions_revoked": changed_access}
+
+
 @router.get("/admin/audit")
 def recent_audit(db: DB, admin: Admin):
     return rows(db.execute("SELECT * FROM audit_events ORDER BY id DESC LIMIT 200"))
