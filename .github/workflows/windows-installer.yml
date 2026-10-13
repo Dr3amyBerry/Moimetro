@@ -124,7 +124,7 @@ jobs:
         run: |
           $installer = Get-ChildItem "dist/installer/Moimetro-Setup-*.exe" | Select-Object -First 1
           if (!$installer) { throw "No se encontró el instalador para probar" }
-          $product = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($installer.FullName).ProductName
+          $product = ([System.Diagnostics.FileVersionInfo]::GetVersionInfo($installer.FullName).ProductName).TrimEnd()
           if ($product -cne "Moímetro") {
             throw "Nombre del instalador corrupto: $product"
           }
