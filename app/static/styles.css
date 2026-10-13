@@ -358,3 +358,34 @@ td button:hover { background: #e5e8eb; }
 .staff-table td:first-child { font-weight: 650; color: #353b42; }
 .staff-table td { text-align: left; }
 .staff-table th:nth-child(6), .staff-table td:nth-child(6) { text-align: left; }
+
+/* Simple account administration and immutable clinical change history. */
+.account-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(18, 22, 28, .57);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+.account-overlay[hidden] { display: none !important; }
+.account-modal { width: min(100%, 475px); max-height: 90vh; overflow-y: auto; box-shadow: 0 22px 70px #13171e44; }
+.account-modal .panel-heading { align-items: flex-start; }
+.account-modal .form-stack > button { justify-self: stretch; }
+.revisions-panel { margin-top: 20px; }
+.revisions-panel .panel-heading { margin-bottom: 12px; }
+.revision-item { padding: 15px 0; border-top: 1px solid var(--line); }
+.revision-item strong { font-size: .9rem; color: #343a43; }
+.revision-item p { margin: 6px 0; font-size: .83rem; color: #555d68; line-height: 1.5; overflow-wrap: anywhere; }
+.revision-item small { display: block; font-size: .76rem; color: #7a818b; overflow-wrap: anywhere; }
+.revisions-panel .pagination { padding-left: 0; padding-right: 0; margin-top: 8px; }
+#staffManageForm > p { grid-column: 1 / -1; margin: 0; }
+#staffManageForm label:nth-of-type(3) { grid-column: 1 / -1; }
+.staff-table th:nth-child(5), .staff-table td:nth-child(5) { text-align: right; }
+.staff-table th:nth-child(5) { min-width: 125px; }
+@media (max-width: 650px) {
+  .account-modal { padding: 20px; }
+  #staffManageForm > p, #staffManageForm label:nth-of-type(3) { grid-column: auto; }
+  .topbar-actions .user-identity { display: none; }
+}
