@@ -1,3 +1,4 @@
+﻿; UTF-8 WITH BOM required: Inno Setup 6.2.2 otherwise reads accented text as ANSI.
 ; Build from GitHub Actions or pass /DBuildRoot=<absolute repo path>.
 #ifndef BuildRoot
   #define BuildRoot "..\.."
@@ -18,7 +19,7 @@ AppName={#MyAppName}
 AppVersion={#MyVersion}
 AppVerName={#MyAppName} {#MyVersion}
 DefaultDirName={localappdata}\Programs\Moimetro
-DefaultGroupName=Moímetro
+DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 UsePreviousAppDir=yes
@@ -48,6 +49,14 @@ Name: "desktopicon"; Description: "Crear acceso directo en el escritorio"; Group
 
 [Files]
 Source: "{#BuildRoot}\dist\Moimetro\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+; Remove only the corrupted shortcut names created by previous ANSI decoding
+; of UTF-8. They are explicitly scoped to this application's former names.
+[InstallDelete]
+Type: files; Name: "{autodesktop}\\MoÃ­metro.lnk"
+Type: files; Name: "{autoprograms}\\MoÃ­metro.lnk"
+Type: files; Name: "{autodesktop}\\MoÃmetro.lnk"
+Type: files; Name: "{autoprograms}\\MoÃmetro.lnk"
 
 [Icons]
 Name: "{autoprograms}\Moímetro"; Filename: "{app}\Moimetro.exe"; WorkingDir: "{app}"
