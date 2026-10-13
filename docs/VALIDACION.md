@@ -2,7 +2,7 @@
 
 ## Estado general
 
-- **Pruebas de API automatizadas**: presentes en \`tests/test_api.py\` y workflow \`.github/workflows/test.yml\`.
+- **Pruebas de API automatizadas**: presentes en `tests/test_api.py` y workflow `.github/workflows/test.yml`.
 - **Compilación automatizada ESP32**: workflow con PlatformIO; compilación no prueba cableado ni precisión.
 - **Validación física de sensores**: **pendiente**.
 - **Clasificación automática de triaje**: **deshabilitada y pendiente de protocolo/revisión**.
@@ -14,10 +14,10 @@
 |---|---|---|---|
 | QA-001 | Login válido/inválido | Pruebas automatizadas y resultado Actions | En seguimiento CI |
 | QA-002 | Búsqueda y duplicado de cédula | Caso automatizado sin datos reales | En seguimiento CI |
-| QA-003 | Consulta con identidad de paciente | Sesión ligada a \`encounter_id\` correcto | En seguimiento CI |
+| QA-003 | Consulta con identidad de paciente | Sesión ligada a `encounter_id` correcto | En seguimiento CI |
 | QA-004 | SpO₂ falso enviado por ESP32 | API responde 422 | En seguimiento CI |
 | QA-005 | Lectura sin dedo/valor inválido | Se rechaza y no acepta automáticamente | En seguimiento CI |
-| QA-006 | Lectura pendiente y aceptación humana | Registro de \`accepted_by\` y estado | En seguimiento CI |
+| QA-006 | Lectura pendiente y aceptación humana | Registro de `accepted_by` y estado | En seguimiento CI |
 | QA-007 | Rol recepción intenta editar diagnóstico | API responde 403 | En seguimiento CI |
 | QA-008 | Persistencia/copias SQLite | Backup coherente + prueba de restauración | Parcial: backup y verificación; restauración pendiente |
 | QA-009 | API y frontend sin Internet | PC y ESP32 en router sin WAN | Pendiente prueba física |
@@ -47,7 +47,7 @@ Registrar la URL del commit, URL del workflow, fecha, versión del firmware, ide
 
 ### Formato de acta
 
-\`\`\`text
+```text
 ID:
 Fecha / versión:
 Tipo de prueba:
@@ -60,4 +60,4 @@ Error o incertidumbre:
 Conclusión:
 Responsable / revisión clínica (si aplica):
 Enlace de evidencia:
-\`\`\`
+```
