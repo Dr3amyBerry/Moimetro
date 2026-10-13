@@ -2,6 +2,28 @@
 "use strict";
 
 const el = id => document.getElementById(id);
+const setupToken = (() => {
+  const fragment = window.location.hash || "";
+  if (!fragment.startsWith("#setup=")) return null;
+  const token = decodeURIComponent(fragment.slice(7));
+  window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  return token;
+})();
+
+function setupVisibility(required) {
+  el("setupPanel").hidden = !required;
+  el("loginForm").hidden = required;
+  el("loginHeading").textContent = required ? "Configurar Moímetro" : "Iniciar sesión";
+}
+
+async function checkFirstRun() {
+  const status = await api("/api/setup/status");
+  setupVisibility(Boolean(status.required && status.available && setupToken));
+  if (status.required && !status.available) {
+    toast("Configure el administrador desde el comando de instalación.", true);
+  }
+}
+
 const state = { token: null, role: "", username: "", patient: null,
                 encounter: null, capture: null };
 const mayMeasure = () => ["admin", "nurse", "clinician"].includes(state.role);
@@ -268,6 +290,21 @@ for (const tab of document.querySelectorAll(".tab-button")) {
 }
 el("backToVisitsButton").addEventListener("click", () => setActiveView("overview"));
 
+el("setupForm").addEventListener("submit", safe(async event => {
+  if (!setupToken) throw new Error("Abra el programa desde el acceso directo.");
+  const form = formValue(event.target);
+  if (form.password !== form.confirm) {
+    throw new Error("Las contraseñas no coinciden.");
+  }
+  await api("/api/setup/admin", {
+    method: "POST",
+    headers: { "X-Setup-Token": setupToken },
+    body: JSON.stringify({ username: form.username, password: form.password })
+  });
+  event.target.reset();
+  setupVisibility(false);
+  toast("Administrador creado. Inicie sesión.");
+}));
 el("loginForm").addEventListener("submit", safe(async event => {
   const values = formValue(event.target);
   const data = await api("/api/auth/login", { method: "POST", body: JSON.stringify(values) });
@@ -380,3 +417,4 @@ window.setInterval(() => {
     Promise.all([refreshCapture(), refreshReadings()]).catch(error => toast(error.message, true));
 }, 5000);
 showLogin();
+checkFirstRun().catch(error => toast(error.message, true));
