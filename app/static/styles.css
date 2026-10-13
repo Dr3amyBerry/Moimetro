@@ -351,3 +351,10 @@ td button:hover { background: #e5e8eb; }
   .form-page-panel .form-stack { grid-template-columns: 1fr; }
   .form-page-panel .form-stack > .button { grid-column: auto; }
 }
+/* Administrators see a real staff list rather than an always-open sidebar form. */
+.extra-form { margin-top: 20px; }
+.staff-table { min-width: 570px; }
+.staff-table th:first-child { width: 31%; }
+.staff-table td:first-child { font-weight: 650; color: #353b42; }
+.staff-table td { text-align: left; }
+.staff-table th:nth-child(6), .staff-table td:nth-child(6) { text-align: left; }
