@@ -85,8 +85,14 @@ jobs:
       - name: Probar ejecutable sin abrir interfaz
         shell: pwsh
         run: |
-          $proc = Start-Process -FilePath (Resolve-Path "dist/Moimetro/Moimetro.exe") `
-            -ArgumentList "--self-test" -PassThru -Wait
+          $exe = (Resolve-Path "dist/Moimetro/Moimetro.exe").Path
+          $proc = Start-Process -FilePath $exe -ArgumentList "--self-test" -PassThru
+          if (!$proc.WaitForExit(30000)) {
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+            throw "El EXE no finalizó la prueba en 30 segundos"
+          }
+          $logfile = Join-Path $env:TEMP "Moimetro-selftest-error.log"
+          if (Test-Path $logfile) { Get-Content $logfile }
           if ($proc.ExitCode -ne 0) { throw "El EXE falló: $($proc.ExitCode)" }
 
       - name: Instalar compilador de instaladores
