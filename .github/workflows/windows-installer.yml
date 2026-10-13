@@ -165,7 +165,7 @@ jobs:
     name: Publicar tres instaladores en Releases
     needs: package
     if: >-
-      ${{ startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main' && github.event.head_commit.message == 'release: Moimetro v0.3.0-beta.1') }}
+      ${{ startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main' && github.event.head_commit.message == 'release: Moimetro v0.3.1-beta.1') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -182,8 +182,8 @@ jobs:
           sha256sum Moimetro-Setup-*.exe > SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.3.0-beta.1' }}
-          name: 'Moímetro v0.3.0 beta — Windows'
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.3.1-beta.1' }}
+          name: 'Moímetro v0.3.1 beta — Windows'
           target_commitish: ${{ github.sha }}
           files: |
             installers/*.exe
@@ -200,6 +200,6 @@ jobs:
             - `Moimetro-Setup-legacy-x64.exe` — Windows 7 SP1+ (64 bits).
             - `Moimetro-Setup-modern-x64.exe` — Windows 8.1+ (64 bits).
 
-            Incluye gestión de cuentas/roles, revocación de sesiones, cambio de contraseña, interfaz clínica y revisiones de expedientes.
+            Incluye gestión de cuentas, expedientes y una interfaz estable: las pestañas mantienen su tamaño, las tablas tienen scroll propio y las mediciones manuales se abren en un diálogo. Lecturas paginadas por consulta.
 
             Las versiones legacy (Windows 7 y Python 3.8) son software sin soporte de seguridad. No se autoriza utilizar esta beta para historias clínicas reales ni decisiones médicas. La validación física de Windows 7 y de sensores está pendiente.
