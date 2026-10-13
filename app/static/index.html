@@ -43,6 +43,21 @@
           <button class="primary" type="submit">Registrar paciente</button>
         </form>
       </section>
+      <section id="adminSection" class="panel" hidden>
+        <p class="eyebrow">Administración</p>
+        <h2>Crear cuenta de personal</h2>
+        <form id="staffForm">
+          <label>Usuario<input name="username" required pattern="[a-zA-Z0-9_]+" minlength="3"></label>
+          <label>Contraseña inicial<input name="password" type="password" required minlength="12" autocomplete="new-password"></label>
+          <label>Rol<select name="role">
+            <option value="reception">Recepción</option>
+            <option value="nurse">Enfermería</option>
+            <option value="clinician">Médico</option>
+            <option value="admin">Administrador</option>
+          </select></label>
+          <button class="secondary" type="submit">Crear usuario</button>
+        </form>
+      </section>
     </aside>
     <div class="content">
       <section class="panel patient-header">
