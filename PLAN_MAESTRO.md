@@ -25,7 +25,7 @@
 | Detección/SpO₂ | SpO₂ simulado eliminado; API rechaza SpO₂ del ESP32 | Mitigación del falso valor aplicada; SpO₂ real **no implementado** |
 | Triaje | Ruta informa `not_validated` sin prioridad | **Bloqueado hasta revisión clínica** |
 | Respaldo | `python -m app.manage backup` y `verify-backup` | Respaldo y verificación inicial; restauración cifrada/ensayada pendiente |
-| Documentación paralela | `docs/ARCHITECTURE.md`, `SEGURIDAD.md`, `VALIDACION.md`, `DOCUMENTACION_ROADMAP.md` | Borradores y matrices preparados; informes definitivos pendientes |
+| Documentación paralela | `docs/ARCHITECTURE.md`, `SEGURIDAD.md`, `VALIDACION.md`, `DOCUMENTACION_ROADMAP.md`, `MANUAL_USUARIO.md` | Borradores y matrices preparados; informes definitivos pendientes |
 
 ### Interpretación de estados
 
