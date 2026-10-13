@@ -56,6 +56,24 @@ function button(label, sub, action, selected = false) {
   node.addEventListener("click", () => action().catch(error => toast(error.message, true)));
   return node;
 }
+function setActiveView(view) {
+  const views = {
+    overview: "viewOverview",
+    profile: "viewProfile",
+    consultation: "viewEncounter"
+  };
+  if (!Object.hasOwn(views, view)) return;
+  for (const [name, id] of Object.entries(views)) {
+    el(id).hidden = name !== view;
+  }
+  for (const tab of document.querySelectorAll(".tab-button")) {
+    const active = tab.dataset.view === view;
+    tab.classList.toggle("active", active);
+    if (active) tab.setAttribute("aria-current", "page");
+    else tab.removeAttribute("aria-current");
+  }
+}
+
 function showLogin() {
   el("loginScreen").hidden = false;
   el("workScreen").hidden = true;
@@ -64,13 +82,20 @@ function showLogin() {
   state.patient = null;
   state.encounter = null;
   state.capture = null;
+  el("patientWork").hidden = true;
+  el("emptyState").hidden = false;
+  el("patientTitle").textContent = "Pacientes";
+  el("patientDetails").textContent = "Selecciona un paciente para comenzar.";
 }
 function showWork() {
   el("loginScreen").hidden = true;
   el("workScreen").hidden = false;
   el("logoutButton").hidden = false;
   el("adminSection").hidden = state.role !== "admin";
-  el("identity").textContent = state.username + " · " + state.role;
+  const roles = { admin: "Administración", reception: "Recepción",
+                  nurse: "Enfermería", clinician: "Medicina" };
+  el("identity").textContent = state.username + " · " + (roles[state.role] || state.role);
+  el("emptyState").hidden = Boolean(state.patient);
 }
 
 async function loadPatients() {
@@ -109,7 +134,10 @@ async function selectPatient(id) {
     control.disabled = !mayClinicallyEdit();
   }
   el("patientWork").hidden = false;
+  el("emptyState").hidden = true;
   el("encounterWork").hidden = true;
+  el("encounterEmpty").hidden = false;
+  setActiveView("overview");
   await Promise.all([loadEncounters(), loadPatients()]);
 }
 
@@ -137,7 +165,9 @@ async function selectEncounter(id) {
   if (encounter.patient_id !== state.patient?.id)
     throw new Error("La consulta no pertenece al paciente seleccionado.");
   state.encounter = encounter;
+  el("encounterEmpty").hidden = true;
   el("encounterWork").hidden = false;
+  setActiveView("consultation");
   el("encounterMeta").textContent = "#" + encounter.id + " · " +
     dateText(encounter.opened_at) + " · " + (encounter.status === "open" ? "Abierta" : "Cerrada");
   const open = encounter.status === "open";
@@ -233,6 +263,11 @@ function safe(fn) {
   };
 }
 
+for (const tab of document.querySelectorAll(".tab-button")) {
+  tab.addEventListener("click", () => setActiveView(tab.dataset.view));
+}
+el("backToVisitsButton").addEventListener("click", () => setActiveView("overview"));
+
 el("loginForm").addEventListener("submit", safe(async event => {
   const values = formValue(event.target);
   const data = await api("/api/auth/login", { method: "POST", body: JSON.stringify(values) });
@@ -260,6 +295,7 @@ el("patientForm").addEventListener("submit", safe(async e => {
   e.target.reset();
   toast("Paciente registrado.");
   await selectPatient(created.id);
+  el("newPatientDetails").open = false;
 }));
 el("patientEditForm").addEventListener("submit", safe(async e => {
   if (!state.patient) return;
