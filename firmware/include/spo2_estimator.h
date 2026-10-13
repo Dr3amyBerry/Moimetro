@@ -48,6 +48,8 @@ class Spo2Estimator {
     head_ = 0;
     stride_ = 0;
     hasPrevious_ = false;
+    hasComputed_ = false;
+    previousRatio_ = NAN;
     output_ = {};
     output_.quality = why;
   }
