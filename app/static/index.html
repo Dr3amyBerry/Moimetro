@@ -52,24 +52,89 @@
   </main>
 
   <div id="workScreen" class="workspace" hidden>
-    <aside class="sidebar" aria-label="Panel de pacientes">
+    <aside class="sidebar" aria-label="Navegación">
       <div class="sidebar-title">
-        <span class="sidebar-label">ÁREA DE TRABAJO</span>
-        <h2>Pacientes</h2>
+        <span class="sidebar-label">MOÍMETRO</span>
+        <h2>Panel de trabajo</h2>
       </div>
-
-      <div class="sidebar-section">
-        <label for="search" class="sidebar-field-label">Buscar paciente</label>
-        <div class="searchbar">
-          <input id="search" type="search" placeholder="Cédula o nombre" autocomplete="off">
-          <button id="searchButton" class="button button-search" type="button" aria-label="Buscar">Buscar</button>
-        </div>
-        <div id="patientList" class="item-list" aria-live="polite"></div>
+      <nav class="side-navigation" aria-label="Áreas del sistema">
+        <span class="side-navigation-heading">GESTIÓN</span>
+        <button id="navPatients" type="button" class="side-nav-item selected" aria-current="page">
+          <span class="nav-glyph" aria-hidden="true">▤</span> Pacientes
+        </button>
+        <button id="navStaff" type="button" class="side-nav-item" hidden>
+          <span class="nav-glyph" aria-hidden="true">♙</span> Personal
+        </button>
+      </nav>
+      <div class="sidebar-assist">
+        <span class="sidebar-label">CENTRO DE SALUD</span>
+        <p>Consultorio Popular Tipo III<br>Las Cayenas</p>
       </div>
+      <p class="sidebar-footnote">Sistema local · Sin conexión externa</p>
+    </aside>
 
-      <details id="newPatientDetails" class="sidebar-disclosure">
-        <summary><span aria-hidden="true">＋</span> Nuevo paciente</summary>
-        <form id="patientForm" class="form-stack sidebar-form">
+    <main class="content">
+      <section id="directoryScreen" class="area-screen">
+        <header class="page-heading">
+          <div>
+            <p class="section-kicker">GESTIÓN DE EXPEDIENTES</p>
+            <h1>Directorio de pacientes</h1>
+            <p class="muted">Consulta, busca y administra los registros del centro.</p>
+          </div>
+          <button id="newPatientButton" class="button button-primary" type="button">+ Registrar paciente</button>
+        </header>
+        <section class="panel directory-panel" aria-labelledby="directoryTitle">
+          <div class="directory-toolbar">
+            <div class="directory-toolbar-title">
+              <h2 id="directoryTitle">Pacientes registrados</h2>
+              <p class="muted">Los registros más recientes aparecen primero.</p>
+            </div>
+            <div class="directory-filters">
+              <label class="search-field" for="search">Buscar paciente
+                <input id="search" type="search" placeholder="Nombre o número de documento" maxlength="100" autocomplete="off">
+              </label>
+              <label class="directory-filter" for="directoryDocumentType">Documento
+                <select id="directoryDocumentType">
+                  <option value="">Todos</option><option value="V">V</option><option value="E">E</option>
+                  <option value="P">P</option><option value="OTRO">Otro</option>
+                </select>
+              </label>
+              <button id="searchButton" class="button button-secondary" type="button">Buscar</button>
+            </div>
+          </div>
+          <div id="directoryStatus" class="directory-status" role="status" aria-live="polite">Cargando pacientes…</div>
+          <div class="table-scroller directory-scroller">
+            <table class="directory-table" aria-label="Directorio de pacientes">
+              <thead><tr>
+                <th>Nombre</th><th>Documento</th><th>Nacimiento</th><th>Teléfono</th><th>Consultas</th><th>Expediente</th>
+              </tr></thead>
+              <tbody id="patientList">
+                <tr><td colspan="6">Cargando pacientes…</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" aria-label="Páginas de pacientes">
+            <span id="directoryPageLabel">Página 1</span>
+            <div class="pagination-actions">
+              <button id="directoryPrev" class="button button-quiet" type="button" disabled>Anterior</button>
+              <button id="directoryNext" class="button button-quiet" type="button" disabled>Siguiente</button>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section id="registrationScreen" class="area-screen" hidden>
+        <header class="page-heading">
+          <div>
+            <p class="section-kicker">PACIENTES / NUEVO REGISTRO</p>
+            <h1>Registrar paciente</h1>
+            <p class="muted">Completa los datos de identificación para abrir el expediente.</p>
+          </div>
+          <button id="cancelPatientButton" class="button button-secondary" type="button">Volver al directorio</button>
+        </header>
+        <section class="panel form-page-panel">
+          <h2>Datos del paciente</h2>
+          <form id="patientForm" class="form-stack sidebar-form">
           <label>Tipo de documento
             <select name="document_type"><option>V</option><option>E</option><option>P</option><option>OTRO</option></select>
           </label>
@@ -79,11 +144,20 @@
           <label>Teléfono (opcional)<input name="phone"></label>
           <button type="submit" class="button button-sidebar">Registrar paciente</button>
         </form>
-      </details>
+        </section>
+      </section>
 
-      <details id="adminSection" class="sidebar-disclosure" hidden>
-        <summary><span aria-hidden="true">◇</span> Personal</summary>
-        <form id="staffForm" class="form-stack sidebar-form">
+      <section id="adminSection" class="area-screen" hidden>
+        <header class="page-heading">
+          <div>
+            <p class="section-kicker">ADMINISTRACIÓN</p>
+            <h1>Personal del centro</h1>
+            <p class="muted">Acceso y funciones para el personal autorizado.</p>
+          </div>
+        </header>
+        <section class="panel form-page-panel">
+          <h2>Nuevo usuario</h2>
+          <form id="staffForm" class="form-stack sidebar-form">
           <label>Usuario<input name="username" pattern="[a-zA-Z0-9_]+" minlength="3" required></label>
           <label>Contraseña inicial<input name="password" type="password" minlength="12" autocomplete="new-password" required></label>
           <label>Rol
@@ -96,27 +170,19 @@
           </label>
           <button type="submit" class="button button-sidebar">Crear usuario</button>
         </form>
-      </details>
-
-      <p class="sidebar-footnote">Consultorio Popular Tipo III<br>Las Cayenas</p>
-    </aside>
-
-    <main class="content">
-      <header class="patient-header panel">
-        <div>
-          <p class="section-kicker">EXPEDIENTE</p>
-          <h1 id="patientTitle">Pacientes</h1>
-          <p id="patientDetails" class="muted">Selecciona un paciente para comenzar.</p>
-        </div>
-        <span class="header-tag">Registro local</span>
-      </header>
-
-      <section id="emptyState" class="empty-state panel">
-        <div class="empty-icon" aria-hidden="true">▤</div>
-        <h2>Selecciona un paciente</h2>
-        <p>Busca por cédula o registra uno nuevo desde el panel lateral.</p>
+        </section>
       </section>
 
+      <section id="patientScreen" class="area-screen" hidden>
+        <button id="backToDirectory" class="breadcrumb-button" type="button">← Volver al directorio</button>
+        <header class="patient-header panel">
+          <div>
+            <p class="section-kicker">EXPEDIENTE DEL PACIENTE</p>
+            <h1 id="patientTitle">Paciente</h1>
+            <p id="patientDetails" class="muted"></p>
+          </div>
+          <span class="header-tag">Registro local</span>
+        </header>
       <div id="patientWork" hidden>
         <nav class="workspace-tabs" aria-label="Secciones del expediente">
           <button class="tab-button active" data-view="overview" type="button" aria-current="page">Consultas</button>
@@ -141,7 +207,14 @@
               <div class="panel-heading">
                 <div><p class="section-kicker">HISTORIAL</p><h2>Consultas registradas</h2></div>
               </div>
-              <div id="encounterList" class="item-list encounter-list"></div>
+              <div id="encounterList" class="item-list encounter-list" aria-live="polite"></div>
+              <div class="pagination visits-pagination" aria-label="Páginas de consultas">
+                <span id="visitPageLabel">Página 1</span>
+                <div class="pagination-actions">
+                  <button id="visitListPrev" class="button button-quiet" type="button" disabled>Anterior</button>
+                  <button id="visitListNext" class="button button-quiet" type="button" disabled>Siguiente</button>
+                </div>
+              </div>
             </section>
           </div>
         </div>
@@ -243,9 +316,10 @@
           </section>
         </div>
       </div>
+
+      </section>
     </main>
   </div>
-
   <div id="toast" role="status" aria-live="polite"></div>
   <script src="/static/app.js" defer></script>
 </body>
