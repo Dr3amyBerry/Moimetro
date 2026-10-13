@@ -39,6 +39,7 @@ DallasTemperature ds18b20(&wire);
 MAX30105 maxSensor;
 
 bool maxReady = false;
+bool fingerPresent = false;
 float ambientC = NAN, humidity = NAN, bodyC = NAN, bpm = NAN;
 byte beatRates[RATE_SIZE] = {};
 byte beatCount = 0, beatPosition = 0;
@@ -59,9 +60,11 @@ void readPulse() {
   if (!maxReady) return;
   const long ir = maxSensor.getIR();
   if (ir < FINGER_IR_MIN) {
+    fingerPresent = false;
     resetPulse();
     return;
   }
+  fingerPresent = true;
   // If no valid beat has been detected for several seconds, invalidate old BPM.
   if (lastBeat != 0 && millis() - lastBeat > 4000) resetPulse();
   if (!checkForBeat(ir)) return;
@@ -136,14 +139,14 @@ void pollCapture() {
   http.end();
 }
 
-void addSample(JsonArray &values, const char *kind, float value) {
+void addSample(JsonArray &values, const char *kind, float value, const char *invalidStatus = "unavailable") {
   JsonObject sample = values.add<JsonObject>();
   sample["kind"] = kind;
   if (isfinite(value)) {
     sample["quality"] = "ok";
     sample["value"] = value;
   } else {
-    sample["quality"] = "unavailable";
+    sample["quality"] = invalidStatus;
     sample["value"] = nullptr;
   }
 }
@@ -155,7 +158,7 @@ void uploadReadings() {
   payload["device_id"] = MOI_DEVICE_ID;
   JsonArray values = payload["samples"].to<JsonArray>();
   addSample(values, "body_temp_c", bodyC);
-  addSample(values, "pulse_bpm", bpm);
+  addSample(values, "pulse_bpm", bpm, maxReady && !fingerPresent ? "no_contact" : "unavailable");
   addSample(values, "ambient_temp_c", ambientC);
   addSample(values, "humidity_pct", humidity);
   // Deliberately NO SpO2 value: it is not measured by this firmware.
