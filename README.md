@@ -29,6 +29,8 @@ Se generan tres variantes: **Windows 7 SP1+ x86**, **Windows 7 SP1+ x64** y **Wi
 - Registro manual identificado como tal, con nota obligatoria sobre procedencia.
 - Interfaz empresarial en grises: directorio paginado, formularios separados, búsqueda por apellido y cédula, filtros y administración de personal.
 - SQLite FTS5 indexado y paginación por cursor para no cargar listados completos en memoria.
+- Paneles y pestañas con altura controlada y desplazamiento interno; los formularios de medición manual y personal se abren en ventanas, sin desplazar el contenido.
+- Lecturas paginadas de 25 en 25, sin cargar todas las mediciones de una consulta.
 - Interfaz web responsive, sin recursos externos ni dependencia de Internet.
 - Pruebas automatizadas de flujos críticos de API.
 
