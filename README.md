@@ -127,6 +127,10 @@ Las pruebas crean una base SQLite **temporal** con datos ficticios. Existe un wo
 
 El token de usuario se envía en `Authorization: Bearer ...`. El ESP32 usa `X-Device-Key` con clave distinta de la del usuario. **No habilitar puertos hacia Internet ni incrustar claves reales en Git.**
 
+## Manual de operación
+
+Consulte [Manual de usuario (borrador)](docs/MANUAL_USUARIO.md), [Arquitectura](docs/ARCHITECTURE.md), [Seguridad](docs/SEGURIDAD.md) y [Validación](docs/VALIDACION.md).
+
 ## Próximos bloqueos antes del piloto
 
 Requieren trabajo explícito: medición real/calibrada de SpO₂ y temperatura, pruebas con hardware y tiempos de captura, seguridad de red/TLS, restauración verificada de backups, migraciones de base de datos, consentimiento y tratamiento legal de los datos clínicos, protocolo de triaje revisado por profesionales, y manuales definitivos. Ver tareas y dependencias en [PLAN_MAESTRO.md](PLAN_MAESTRO.md).
