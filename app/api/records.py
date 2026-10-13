@@ -2,6 +2,7 @@
 from __future__ import annotations
 import sqlite3
 import re
+import json
 from datetime import date
 from typing import Literal, Optional
 from typing_extensions import Annotated
@@ -10,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.security import only, require_user
-from app.storage import audit, get_db, now, rows
+from app.storage import audit, get_db, now, rows, record_revision
 
 router = APIRouter(prefix="/api")
 DB = Annotated[sqlite3.Connection, Depends(get_db)]
@@ -125,6 +126,12 @@ def new_patient(payload: PatientCreate, db: DB, user: User):
                 (payload.document_type, number, full_name,
                  payload.birth_date.isoformat() if payload.birth_date else None,
                  payload.phone, now()))
+            record_revision(db, user["id"], cursor.lastrowid, "patient", {},
+                            {"document_type": payload.document_type,
+                             "document_number": number, "full_name": full_name,
+                             "birth_date": payload.birth_date.isoformat() if payload.birth_date else None,
+                             "phone": payload.phone},
+                            "Alta del expediente")
             audit(db, user["id"], "create", "patient", cursor.lastrowid)
     except sqlite3.IntegrityError:
         raise HTTPException(409, "El documento ya está registrado.")
@@ -150,6 +157,9 @@ def new_encounter(payload: EncounterCreate, db: DB, user: User):
         cursor = db.execute(
             "INSERT INTO encounters(patient_id,created_by,reason,opened_at) VALUES(?,?,?,?)",
             (payload.patient_id, user["id"], payload.reason.strip(), now()))
+        record_revision(db, user["id"], payload.patient_id, "encounter", {},
+                        {"reason": payload.reason.strip(), "status": "open"},
+                        "Apertura de consulta", encounter_id=cursor.lastrowid)
         audit(db, user["id"], "create", "encounter", cursor.lastrowid)
     return {"id": cursor.lastrowid}
 
@@ -198,17 +208,27 @@ class ClinicalUpdate(BaseModel):
     assessment: str = Field(max_length=10000)
     diagnosis: str = Field(max_length=10000)
     treatment: str = Field(max_length=10000)
+    reason: Optional[str] = Field(default=None, min_length=8, max_length=500)
 
 @router.patch("/encounters/{encounter_id}")
 def update_encounter(encounter_id: int, payload: ClinicalUpdate, db: DB, user: Clinician):
-    encounter = encounter_or_404(db, encounter_id)
-    if encounter["status"] != "open":
-        raise HTTPException(409, "No puede editarse una consulta cerrada.")
     with db:
+        db.execute("BEGIN IMMEDIATE")
+        encounter = encounter_or_404(db, encounter_id)
+        if encounter["status"] != "open":
+            raise HTTPException(409, "No puede editarse una consulta cerrada.")
+        before = {key: encounter[key] for key in ("assessment", "diagnosis", "treatment")}
+        after = {"assessment": payload.assessment,
+                 "diagnosis": payload.diagnosis, "treatment": payload.treatment}
+        if before == after:
+            return {"ok": True, "changed": False}
         db.execute("UPDATE encounters SET assessment=?,diagnosis=?,treatment=? WHERE id=?",
                    (payload.assessment, payload.diagnosis, payload.treatment, encounter_id))
+        record_revision(db, user["id"], encounter["patient_id"], "encounter",
+                        before, after, payload.reason or "Actualización de la consulta",
+                        encounter_id=encounter_id)
         audit(db, user["id"], "update", "encounter", encounter_id)
-    return {"ok": True}
+    return {"ok": True, "changed": True}
 
 @router.post("/encounters/{encounter_id}/close")
 def close_encounter(encounter_id: int, db: DB, user: Clinician):
@@ -222,8 +242,13 @@ def close_encounter(encounter_id: int, db: DB, user: Clinician):
             (encounter_id,)).fetchone()[0]
         if active:
             raise HTTPException(409, "Finalice la captura antes de cerrar.")
+        closed = now()
         db.execute("UPDATE encounters SET status='closed',closed_at=? WHERE id=?",
-                   (now(), encounter_id))
+                   (closed, encounter_id))
+        record_revision(db, user["id"], encounter["patient_id"], "encounter",
+                        {"status": "open", "closed_at": None},
+                        {"status": "closed", "closed_at": closed},
+                        "Cierre de consulta", encounter_id=encounter_id)
         audit(db, user["id"], "close", "encounter", encounter_id)
     return {"ok": True}
 
@@ -231,6 +256,7 @@ def close_encounter(encounter_id: int, db: DB, user: Clinician):
 class HistoryUpdate(BaseModel):
     allergies: str = Field(max_length=10000)
     background: str = Field(max_length=10000)
+    reason: Optional[str] = Field(default=None, min_length=8, max_length=500)
 
 @router.get("/patients/{patient_id}/history")
 def get_history(patient_id: int, db: DB, user: User):
@@ -243,8 +269,18 @@ def get_history(patient_id: int, db: DB, user: User):
 
 @router.put("/patients/{patient_id}/history")
 def update_history(patient_id: int, payload: HistoryUpdate, db: DB, user: Clinician):
-    patient_or_404(db, patient_id)
     with db:
+        db.execute("BEGIN IMMEDIATE")
+        patient_or_404(db, patient_id)
+        previous = db.execute(
+            "SELECT allergies,background FROM patient_histories WHERE patient_id=?",
+            (patient_id,)
+        ).fetchone()
+        before = {"allergies": previous["allergies"] if previous else "",
+                  "background": previous["background"] if previous else ""}
+        after = {"allergies": payload.allergies, "background": payload.background}
+        if before == after:
+            return {"ok": True, "changed": False}
         db.execute(
             """INSERT INTO patient_histories(patient_id,allergies,background,updated_at,updated_by)
                VALUES(?,?,?,?,?)
@@ -252,24 +288,90 @@ def update_history(patient_id: int, payload: HistoryUpdate, db: DB, user: Clinic
                allergies=excluded.allergies,background=excluded.background,
                updated_at=excluded.updated_at,updated_by=excluded.updated_by""",
             (patient_id, payload.allergies, payload.background, now(), user["id"]))
+        record_revision(db, user["id"], patient_id, "history",
+                        before, after, payload.reason or "Actualización de antecedentes")
         audit(db, user["id"], "update", "history", patient_id)
-    return {"ok": True}
+    return {"ok": True, "changed": True}
 
 
 class PatientEdit(BaseModel):
     full_name: str = Field(min_length=2, max_length=150)
     birth_date: Optional[date] = None
     phone: Optional[str] = Field(default=None, max_length=40)
+    reason: Optional[str] = Field(default=None, min_length=8, max_length=500)
 
 @router.patch("/patients/{patient_id}")
 def edit_patient(patient_id: int, payload: PatientEdit, db: DB, user: User):
-    patient_or_404(db, patient_id)
     full_name = payload.full_name.strip()
     if len(full_name) < 2 or (payload.birth_date and payload.birth_date > date.today()):
         raise HTTPException(422, "Datos del paciente inválidos.")
     with db:
+        db.execute("BEGIN IMMEDIATE")
+        patient = patient_or_404(db, patient_id)
+        before = {key: patient[key] for key in ("full_name", "birth_date", "phone")}
+        after = {"full_name": full_name,
+                 "birth_date": payload.birth_date.isoformat() if payload.birth_date else None,
+                 "phone": payload.phone}
+        if before == after:
+            return {"ok": True, "changed": False}
         db.execute("UPDATE patients SET full_name=?,birth_date=?,phone=? WHERE id=?",
-                   (full_name, payload.birth_date.isoformat() if payload.birth_date else None,
-                    payload.phone, patient_id))
+                   (after["full_name"], after["birth_date"], after["phone"], patient_id))
+        record_revision(db, user["id"], patient_id, "patient",
+                        before, after, payload.reason or "Actualización de datos personales")
         audit(db, user["id"], "update", "patient", patient_id)
-    return {"ok": True}
+    return {"ok": True, "changed": True}
+
+
+@router.get("/patients/{patient_id}/revisions")
+def patient_revisions(
+    patient_id: int, db: DB, user: Clinician,
+    limit: int = Query(default=25, ge=1, le=50),
+    before: Optional[int] = Query(default=None, ge=1),
+):
+    """Read-only revision metadata. Medical snapshots are not returned in lists."""
+    patient_or_404(db, patient_id)
+    statement = """SELECT r.*,u.username FROM record_revisions r
+                   JOIN users u ON u.id=r.actor_id
+                   WHERE r.patient_id=?"""
+    params = [patient_id]
+    if before is not None:
+        statement += " AND r.id < ?"
+        params.append(before)
+    result = rows(db.execute(statement + " ORDER BY r.id DESC LIMIT ?",
+                             (*params, limit + 1)))
+    has_more = len(result) > limit
+    visible = result[:limit]
+    items = []
+    for revision in visible:
+        earlier = json.loads(revision["before_json"])
+        later = json.loads(revision["after_json"])
+        fields = sorted(key for key in set(earlier) | set(later)
+                        if earlier.get(key) != later.get(key))
+        items.append({"id": revision["id"], "resource": revision["resource"],
+                      "encounter_id": revision["encounter_id"],
+                      "actor": revision["username"],
+                      "reason": revision["reason"],
+                      "fields": fields, "created_at": revision["created_at"]})
+    audit(db, user["id"], "list", "revision", patient_id)
+    db.commit()
+    return {"items": items,
+            "next_cursor": visible[-1]["id"] if has_more else None}
+
+
+@router.get("/patients/{patient_id}/revisions/{revision_id}")
+def revision_detail(patient_id: int, revision_id: int, db: DB,
+                    user: Annotated[dict, Depends(only("admin"))]):
+    """Sensitive before/after snapshots restricted to administrators."""
+    patient_or_404(db, patient_id)
+    revision = db.execute(
+        "SELECT * FROM record_revisions WHERE id=? AND patient_id=?",
+        (revision_id, patient_id)
+    ).fetchone()
+    if not revision:
+        raise HTTPException(404, "Cambio inexistente.")
+    audit(db, user["id"], "read", "revision", revision_id)
+    db.commit()
+    return {"id": revision["id"], "resource": revision["resource"],
+            "created_at": revision["created_at"], "reason": revision["reason"],
+            "before": json.loads(revision["before_json"]),
+            "after": json.loads(revision["after_json"])}
