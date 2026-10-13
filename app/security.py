@@ -7,6 +7,7 @@ import secrets
 import sqlite3
 from datetime import datetime, timedelta, timezone
 
+from typing import Optional
 from fastapi import Depends, Header, HTTPException
 from app.storage import get_db
 
@@ -39,7 +40,7 @@ def issue_token(db: sqlite3.Connection, user_id: int) -> str:
                (token_hash, user_id, expiration))
     return token
 
-def require_user(authorization: str | None = Header(default=None),
+def require_user(authorization: Optional[str] = Header(default=None),
                  db: sqlite3.Connection = Depends(get_db)) -> dict:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(401, "Debe iniciar sesión.")
@@ -64,7 +65,7 @@ def only(*roles):
         return user
     return dependency
 
-def require_device(x_device_key: str | None = Header(default=None)) -> str:
+def require_device(x_device_key: Optional[str] = Header(default=None)) -> str:
     expected = os.environ.get("MOIMETRO_DEVICE_KEY", "")
     if len(expected) < 32:
         raise HTTPException(503, "Clave de dispositivo no configurada.")
