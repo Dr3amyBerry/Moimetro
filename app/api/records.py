@@ -166,3 +166,22 @@ def update_history(patient_id: int, payload: HistoryUpdate, db: DB, user: Clinic
             (patient_id, payload.allergies, payload.background, now(), user["id"]))
         audit(db, user["id"], "update", "history", patient_id)
     return {"ok": True}
+
+
+class PatientEdit(BaseModel):
+    full_name: str = Field(min_length=2, max_length=150)
+    birth_date: date | None = None
+    phone: str | None = Field(default=None, max_length=40)
+
+@router.patch("/patients/{patient_id}")
+def edit_patient(patient_id: int, payload: PatientEdit, db: DB, user: User):
+    patient_or_404(db, patient_id)
+    full_name = payload.full_name.strip()
+    if len(full_name) < 2 or (payload.birth_date and payload.birth_date > date.today()):
+        raise HTTPException(422, "Datos del paciente inválidos.")
+    with db:
+        db.execute("UPDATE patients SET full_name=?,birth_date=?,phone=? WHERE id=?",
+                   (full_name, payload.birth_date.isoformat() if payload.birth_date else None,
+                    payload.phone, patient_id))
+        audit(db, user["id"], "update", "patient", patient_id)
+    return {"ok": True}
