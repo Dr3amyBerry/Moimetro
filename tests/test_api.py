@@ -362,3 +362,39 @@ def test_fts_index_backfills_existing_patients_without_changing_records(
     init_db()
     with sqlite3.connect(str(db_path())) as db:
         assert db.execute("SELECT COUNT(*) FROM patients").fetchone()[0] == 1
+
+
+def test_staff_directory_is_bounded_private_and_admin_only(client):
+    from app.storage import connect, now
+    admin = login(client)
+    with connect() as db:
+        db.executemany(
+            """INSERT INTO users(username,password_hash,role,created_at)
+               VALUES(?,?,?,?)""",
+            [("staff_{:03d}".format(i), "synthetic-only", "reception", now())
+             for i in range(54)]
+        )
+    assert client.get("/api/admin/users").status_code == 401
+    first = client.get("/api/admin/users", headers=admin).json()
+    assert len(first["items"]) == 20 and first["next_cursor"] is not None
+    assert "password_hash" not in first["items"][0]
+    assert set(first["items"][0]) == {"id", "username", "role", "active", "created_at"}
+    second = client.get("/api/admin/users", headers=admin,
+                        params={"before": first["next_cursor"]}).json()
+    assert len(second["items"]) == 20
+    assert set(x["id"] for x in first["items"]).isdisjoint(
+        x["id"] for x in second["items"]
+    )
+    filtered = client.get("/api/admin/users", headers=admin, params={
+        "q": "staff_05"
+    }).json()["items"]
+    assert filtered and all(x["username"].startswith("staff_05") for x in filtered)
+    assert client.get("/api/admin/users", headers=admin,
+                      params={"limit": 500}).status_code == 422
+    account = client.post("/api/admin/users", headers=admin, json={
+        "username": "frontdesk", "role": "reception",
+        "password": "synthetic-reception-password123"
+    })
+    assert account.status_code == 201
+    reception = login(client, "frontdesk", "synthetic-reception-password123")
+    assert client.get("/api/admin/users", headers=reception).status_code == 403
