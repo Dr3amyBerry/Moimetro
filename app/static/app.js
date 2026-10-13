@@ -32,6 +32,77 @@ const directory = { cursor: null, previous: [], page: 1, next: null, request: 0 
 const visits = { cursor: null, previous: [], page: 1, next: null, request: 0 };
 const staffPaging = { cursor: null, previous: [], page: 1, next: null, request: 0 };
 const revisionPaging = { cursor: null, previous: [], page: 1, next: null, request: 0 };
+const measurementPaging = { cursor: null, previous: [], page: 1, next: null, request: 0 };
+const MEASUREMENT_LIMIT = 25;
+const dialogIds = ["manualMeasureDialog", "staffCreatePanel", "staffManagePanel", "accountPanel"];
+let previousDialogFocus = null;
+
+function closeDialog(id, restoreFocus = true) {
+  const dialog = el(id);
+  if (!dialog || dialog.hidden) return;
+  dialog.hidden = true;
+  if (!dialogIds.some(dialogId => !el(dialogId).hidden)) {
+    document.body.classList.remove("modal-open");
+  }
+  if (id === "staffManagePanel") managedStaff = null;
+  if (id === "staffCreatePanel") el("staffForm").reset();
+  if (id === "manualMeasureDialog") el("manualForm").reset();
+  if (id === "accountPanel") el("passwordForm").reset();
+  if (restoreFocus && previousDialogFocus && previousDialogFocus.isConnected) {
+    previousDialogFocus.focus();
+  }
+  previousDialogFocus = null;
+}
+
+function closeDialogs() {
+  for (const id of dialogIds) closeDialog(id, false);
+  document.body.classList.remove("modal-open");
+}
+
+function openDialog(id) {
+  const opener = document.activeElement;
+  closeDialogs();
+  previousDialogFocus = opener;
+  const dialog = el(id);
+  dialog.hidden = false;
+  document.body.classList.add("modal-open");
+  const focusable = dialog.querySelector("input:not([disabled]), select:not([disabled]), button:not([disabled])");
+  if (focusable) focusable.focus();
+}
+
+document.addEventListener("keydown", event => {
+  const active = dialogIds.find(id => !el(id).hidden);
+  if (!active) return;
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeDialog(active);
+  }
+  if (event.key !== "Tab") return;
+  const targets = Array.from(el(active).querySelectorAll("button, input, select, textarea, a[href]"))
+    .filter(node => !node.disabled && node.getClientRects().length && node.tabIndex >= 0);
+  if (!targets.length) { event.preventDefault(); return; }
+  const first = targets[0];
+  const last = targets[targets.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+});
+document.addEventListener("click", event => {
+  const active = dialogIds.find(id => !el(id).hidden);
+  if (active && event.target === el(active)) closeDialog(active);
+});
+
+function resetMeasurementPages() {
+  measurementPaging.cursor = null;
+  measurementPaging.previous = [];
+  measurementPaging.page = 1;
+  measurementPaging.next = null;
+  ++measurementPaging.request;
+}
 let managedStaff = null;
 let selectedPatientVersion = 0;
 const DIRECTORY_LIMIT = 25;
@@ -90,6 +161,7 @@ function button(label, sub, action, selected = false) {
   return node;
 }
 function setActiveView(view) {
+  closeDialogs();
   const views = {
     overview: "viewOverview",
     profile: "viewProfile",
@@ -108,6 +180,7 @@ function setActiveView(view) {
 }
 
 function showScreen(area) {
+  closeDialogs();
   const screens = {
     directory: "directoryScreen",
     registration: "registrationScreen",
@@ -133,9 +206,8 @@ function showLogin() {
   ++staffPaging.request;
   ++revisionPaging.request;
   managedStaff = null;
-  el("accountPanel").hidden = true;
-  el("staffManagePanel").hidden = true;
-  el("passwordForm").reset();
+  closeDialogs();
+  resetMeasurementPages();
   el("changePasswordButton").hidden = true;
   ++selectedPatientVersion;
   el("loginScreen").hidden = false;
@@ -286,8 +358,7 @@ async function loadStaff() {
       el("staffManageForm").elements.role.disabled = self;
       el("staffManageForm").elements.active.disabled = self;
       el("staffCreatePanel").hidden = true;
-      el("staffManagePanel").hidden = false;
-      el("staffManagePanel").scrollIntoView({ behavior: "smooth", block: "start" });
+      openDialog("staffManagePanel");
     });
     action.appendChild(open);
     tr.appendChild(action);
@@ -358,6 +429,7 @@ async function selectPatient(id) {
   state.encounter = null;
   state.capture = null;
   resetVisitPages();
+  resetMeasurementPages();
   revisionPaging.cursor = null;
   revisionPaging.previous = [];
   revisionPaging.page = 1;
@@ -418,6 +490,7 @@ async function selectEncounter(id) {
   if (encounter.patient_id !== state.patient?.id)
     throw new Error("La consulta no pertenece al paciente seleccionado.");
   state.encounter = encounter;
+  resetMeasurementPages();
   el("encounterEmpty").hidden = true;
   el("encounterWork").hidden = false;
   setActiveView("consultation");
@@ -434,6 +507,7 @@ async function selectEncounter(id) {
     control.disabled = !open || !mayMeasure();
   }
   el("closeEncounterButton").disabled = !open || !mayClinicallyEdit();
+  el("manualMeasureButton").disabled = !open || !mayMeasure();
   await Promise.all([refreshCapture(), refreshReadings(), loadEncounters()]);
 }
 
@@ -451,7 +525,17 @@ async function refreshCapture() {
 
 async function refreshReadings() {
   if (!state.encounter) return;
-  const readings = await api("/api/measurements?encounter_id=" + state.encounter.id);
+  const request = ++measurementPaging.request;
+  const encounterId = state.encounter.id;
+  const params = new URLSearchParams({ encounter_id: String(encounterId),
+    limit: String(MEASUREMENT_LIMIT + 1) });
+  if (measurementPaging.cursor) params.set("before", String(measurementPaging.cursor));
+  const response = await api("/api/measurements?" + params.toString());
+  if (!state.token || state.encounter?.id !== encounterId ||
+      request !== measurementPaging.request) return;
+  const readings = response.slice(0, MEASUREMENT_LIMIT);
+  measurementPaging.next = response.length > MEASUREMENT_LIMIT
+    ? readings[readings.length - 1].id : null;
   const target = el("measurementList");
   clearChildren(target);
   if (!readings.length) {
@@ -496,6 +580,9 @@ async function refreshReadings() {
     row.appendChild(action);
     target.appendChild(row);
   }
+  el("measurementPageLabel").textContent = "Página " + measurementPaging.page;
+  el("measurementPrev").disabled = measurementPaging.previous.length === 0;
+  el("measurementNext").disabled = !measurementPaging.next;
 }
 
 async function actOnReading(id, action) {
@@ -560,19 +647,11 @@ el("navPatients").addEventListener("click", safe(async () => {
 el("navStaff").addEventListener("click", safe(async () => {
   if (state.role !== "admin") return;
   showScreen("staff");
-  el("staffManagePanel").hidden = true;
   managedStaff = null;
   await loadStaff();
 }));
-el("newStaffButton").addEventListener("click", () => {
-  el("staffManagePanel").hidden = true;
-  managedStaff = null;
-  el("staffCreatePanel").hidden = !el("staffCreatePanel").hidden;
-});
-el("cancelStaffButton").addEventListener("click", () => {
-  el("staffCreatePanel").hidden = true;
-  el("staffForm").reset();
-});
+el("newStaffButton").addEventListener("click", () => openDialog("staffCreatePanel"));
+el("cancelStaffButton").addEventListener("click", () => closeDialog("staffCreatePanel"));
 let staffSearchTimer = null;
 el("staffSearch").addEventListener("input", () => {
   clearTimeout(staffSearchTimer);
@@ -594,11 +673,7 @@ el("staffPrev").addEventListener("click", safe(async () => {
   staffPaging.page--;
   await loadStaff();
 }));
-el("cancelStaffManage").addEventListener("click", () => {
-  managedStaff = null;
-  el("staffManagePanel").hidden = true;
-  el("staffManageForm").reset();
-});
+el("cancelStaffManage").addEventListener("click", () => closeDialog("staffManagePanel"));
 el("staffManageForm").addEventListener("submit", safe(async event => {
   if (!managedStaff) return;
   const form = formValue(event.target);
@@ -614,20 +689,13 @@ el("staffManageForm").addEventListener("submit", safe(async event => {
   await api("/api/admin/users/" + managedStaff.id, {
     method: "PATCH", body: JSON.stringify(payload)
   });
-  el("staffManagePanel").hidden = true;
-  managedStaff = null;
+  closeDialog("staffManagePanel");
   resetStaffPages();
   await loadStaff();
   toast("Permisos y sesiones actualizados.");
 }));
-el("changePasswordButton").addEventListener("click", () => {
-  el("accountPanel").hidden = false;
-  el("passwordForm").elements.current_password.focus();
-});
-el("closeAccountPanel").addEventListener("click", () => {
-  el("accountPanel").hidden = true;
-  el("passwordForm").reset();
-});
+el("changePasswordButton").addEventListener("click", () => openDialog("accountPanel"));
+el("closeAccountPanel").addEventListener("click", () => closeDialog("accountPanel"));
 el("passwordForm").addEventListener("submit", safe(async event => {
   const values = formValue(event.target);
   if (values.new_password !== values.confirmation) {
@@ -755,7 +823,7 @@ el("historyForm").addEventListener("submit", safe(async e => {
 el("staffForm").addEventListener("submit", safe(async e => {
   await api("/api/admin/users", { method: "POST", body: JSON.stringify(formValue(e.target)) });
   e.target.reset();
-  el("staffCreatePanel").hidden = true;
+  closeDialog("staffCreatePanel");
   resetStaffPages();
   await loadStaff();
   toast("Cuenta de personal creada.");
@@ -799,6 +867,24 @@ el("refreshReadingsButton").addEventListener("click", safe(async () => {
   await Promise.all([refreshCapture(), refreshReadings()]);
   toast("Lecturas actualizadas.");
 }));
+el("manualMeasureButton").addEventListener("click", () => {
+  if (!state.encounter || state.encounter.status !== "open" || !mayMeasure()) return;
+  openDialog("manualMeasureDialog");
+});
+el("cancelManualMeasure").addEventListener("click", () => closeDialog("manualMeasureDialog"));
+el("measurementNext").addEventListener("click", safe(async () => {
+  if (!measurementPaging.next) return;
+  measurementPaging.previous.push(measurementPaging.cursor);
+  measurementPaging.cursor = measurementPaging.next;
+  measurementPaging.page++;
+  await refreshReadings();
+}));
+el("measurementPrev").addEventListener("click", safe(async () => {
+  if (!measurementPaging.previous.length) return;
+  measurementPaging.cursor = measurementPaging.previous.pop();
+  measurementPaging.page--;
+  await refreshReadings();
+}));
 el("manualForm").addEventListener("submit", safe(async e => {
   const values = formValue(e.target);
   await api("/api/encounters/" + state.encounter.id + "/manual-measurements", {
@@ -806,7 +892,8 @@ el("manualForm").addEventListener("submit", safe(async e => {
       kind: values.kind, value: Number(values.value), notes: values.notes
     })
   });
-  e.target.reset();
+  resetMeasurementPages();
+  closeDialog("manualMeasureDialog");
   await refreshReadings();
   toast("Medición manual registrada con origen identificado.");
 }));
