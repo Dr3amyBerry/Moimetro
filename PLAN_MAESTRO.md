@@ -223,7 +223,7 @@ Cada bloque deberá abrir o registrar sus tareas con identificador, responsable,
 - [ ] `DEV-011` Validar DS18B20; errores `-127 °C`, desconexiones, precisión y método de contacto.
 - [ ] `DEV-012` Detectar MAX30102 y probar LED IR/rojo y calidad de señal.
 - [ ] `DEV-013` Corregir BPM, manejo de primeros latidos, promedios, ausencia de dedo y caducidad.
-- [x] `DEV-014` **Eliminar SpO₂ ficticio y procesar R real**: adquirido Rojo/IR en FIFO, cálculo de relación de razones y descarte de ruido; no enviar porcentajes a pacientes. Calibración y validación clínica pendientes (`QA-012`).
+- [ ] `DEV-014` **PARCIAL: eliminar SpO₂ ficticio y procesar R real**: adquirido Rojo/IR en FIFO, cálculo de relación de razones y descarte de ruido; no enviar porcentajes a pacientes. Calibración y validación clínica pendientes (`QA-012`).
 - [ ] `DEV-015` Implementar estados por sensor: `OK`, `SIN_CONTACTO`, `NO_DISPONIBLE`, `ERROR`, `CADUCADO`.
 - [ ] `DEV-016` Evitar bloqueos de adquisición/servidor, incorporar reconexión y recuperación de errores.
 - [ ] `DEV-017` Comparar mediciones con instrumentos de referencia y registrar limitaciones.
