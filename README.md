@@ -11,7 +11,7 @@ Moímetro incorpora instaladores **.exe autocontenidos**: el usuario no necesita
 
 Se generan tres variantes: **Windows 7 SP1+ x86**, **Windows 7 SP1+ x64** y **Windows 8.1+ x64 moderna**. El paquete legacy solo es apto para pruebas con datos ficticios debido a la falta de actualizaciones de seguridad de Windows 7 y Python 3.8.
 
-**[Descargar instaladores directamente desde GitHub Releases](https://github.com/Dr3amyBerry/Moimetro/releases/tag/v0.3.0-beta.1)** · [Guía de instalación para Windows](docs/INSTALACION_WINDOWS.md).
+**[Descargar instaladores directamente desde GitHub Releases](https://github.com/Dr3amyBerry/Moimetro/releases/tag/v0.3.1-beta.1)** · [Guía de instalación para Windows](docs/INSTALACION_WINDOWS.md).
 
 **Importante:** la existencia de la receta de empaquetado no garantiza todavía ejecución en Windows 7 real; la prueba física de ambas arquitecturas sigue pendiente.
 
