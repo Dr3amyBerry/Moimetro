@@ -9,7 +9,7 @@
 #ifndef Flavor
   #define Flavor "legacy"
 #endif
-#define MyVersion "0.2.0"
+#define MyVersion "0.3.0"
 #define MyAppName "Moímetro"
 #define OutputName "Moimetro-Setup-" + Flavor + "-" + Arch
 
