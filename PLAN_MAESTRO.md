@@ -2,10 +2,46 @@
 
 > **Documento rector:** desarrollo tecnológico y documentación técnica/académica del sistema Moímetro.  
 > **Proyecto:** Consultorio Popular Tipo III Las Cayenas.  
-> **Versión del plan:** 1.0 — 2026-10-12.  
-> **Estado global:** planificación inicial; implementación integral y validación pendientes.  
+> **Versión del plan:** 1.1 — 2026-10-12.  
+> **Estado global:** prototipo de firmware y aplicación local incorporado en código; validación física, seguridad clínica y puesta en marcha aún pendientes.  
 > **Fuente inicial:** definición funcional y sketch de ESP32 compartidos por el equipo del proyecto.  
 > **Regla de evidencias:** una funcionalidad **no** se marca como completada sin código versionado, pruebas reproducibles y evidencia verificable.
+
+---
+
+## Estado de implementación — primera tanda v0.1
+
+> **Evidencia:** archivos versionados en \`main\`, tests de integración en \`tests/test_api.py\`, y workflow [API tests](https://github.com/Dr3amyBerry/Moimetro/actions/workflows/test.yml). La aprobación de un build **no equivale** a validación clínica o de hardware. El diagnóstico de la sección 2 describe la línea base del repositorio **cuando se creó el plan**, no su estado posterior.
+
+| Área | Evidencia implementada | Estado actual |
+|---|---|---|
+| Estructura y dependencias | \`requirements.txt\`, \`app/\`, \`firmware/platformio.ini\`, \`tests/\` | Código implementado; integración en evaluación |
+| Pacientes por cédula | \`app/api/records.py\` y \`app/static/\` | Implementado y con pruebas API; pruebas operativas pendientes |
+| Historial y consultas | \`patients\`, \`patient_histories\`, \`encounters\` | Código implementado; no validado con pacientes reales |
+| Usuarios y roles | \`app/security.py\`, \`app/api/auth.py\`, \`app/manage.py\` | Roles básicos implementados; endurecimiento pendiente |
+| Firmware de sensores | \`firmware/src/main.cpp\` | Compilación CI de versión inicial exitosa; pruebas físicas pendientes |
+| API del ESP32 | \`app/api/sensors.py\` | Contrato implementado con validación de sesión y estado |
+| Medición vinculada a consulta | \`capture_sessions\`, \`measurements\` | Implementación y pruebas automatizadas; integración física pendiente |
+| Detección/SpO₂ | SpO₂ simulado eliminado; API rechaza SpO₂ del ESP32 | Mitigación del falso valor aplicada; SpO₂ real **no implementado** |
+| Triaje | Ruta informa \`not_validated\` sin prioridad | **Bloqueado hasta revisión clínica** |
+| Respaldo | \`python -m app.manage backup\` y \`verify-backup\` | Respaldo y verificación inicial; restauración cifrada/ensayada pendiente |
+| Documentación paralela | \`docs/ARCHITECTURE.md\`, \`SEGURIDAD.md\`, \`VALIDACION.md\`, \`DOCUMENTACION_ROADMAP.md\` | Borradores y matrices preparados; informes definitivos pendientes |
+
+### Interpretación de estados
+
+- **Implementado en código:** existe ruta/archivo que expresa la función. No implica por sí sola corrección completa.
+- **Probado automáticamente:** pruebas en CI con datos ficticios y hardware simulado o inexistente. No equivale a validación con sensores reales.
+- **Pendiente de validación física:** no se ha medido exactitud, estabilidad, fiabilidad ante cortes ni seguridad del dispositivo en el consultorio.
+- **Pendiente clínico:** SpO₂ y cualquier regla de urgencia/triaje **no pueden marcarse completos** sin protocolo y evaluación por profesionales.
+
+### Próximos trabajos necesarios
+
+1. Verificar el último commit en GitHub Actions (API, sintaxis JavaScript y firmware); corregir cualquier fallo antes de declarar la tanda probada.
+2. Completar prueba **con sensores reales**: DS18B20, MAX30102, DHT11, interrupciones por HTTP y comparación contra instrumentos de referencia.
+3. Integrar SpO₂ real únicamente tras validación técnica y clínica; no volver a usar saturaciones fijas.
+4. Diseñar red segura con TLS y cifrado/respaldo de expedientes antes de trabajar con datos personales de salud.
+5. Definir protocolo de triaje con personal sanitario y validar casos, sin automatizar decisiones médicas prematuramente.
+6. Preparar restauración, migraciones, pruebas multipuesto, contingencias eléctricas y documentación académica final.
 
 ---
 
@@ -447,3 +483,4 @@ Los demás IDs definidos en las fases también empiezan en `PENDIENTE`; esta tab
 | Fecha | Versión | Cambio |
 |---|---|---|
 | 2026-10-12 | 1.0 | Creación del plan maestro desde requisitos compartidos y sketch de referencia; se deja todo el trabajo como pendiente hasta obtener evidencia en el repositorio. |
+| 2026-10-12 | 1.1 | Se incorpora estado v0.1 de firmware, API, interfaz local, SQLite, expedientes, seguridad inicial, pruebas CI y documentación, preservando pendientes físicos/clínicos. |
