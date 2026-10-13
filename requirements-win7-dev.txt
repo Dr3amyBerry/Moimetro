@@ -1,0 +1,4 @@
+-r requirements-win7.txt
+httpx==0.24.1
+pytest==8.3.5
+pyinstaller==5.13.2
