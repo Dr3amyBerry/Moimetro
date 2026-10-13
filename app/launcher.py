@@ -92,6 +92,14 @@ def wait_for_ready(timeout_seconds=12):
 
 def main():
     multiprocessing.freeze_support()
+    if "--self-test" in sys.argv:
+        from app.main import app
+        from app.main import static_dir
+        if not (static_dir / "index.html").is_file():
+            raise SystemExit("No se empaquetó el frontend.")
+        if not any(route.path == "/api/health" for route in app.routes):
+            raise SystemExit("Falta API local.")
+        return
     if os.name != "nt":
         raise SystemExit("El instalador de escritorio es para Windows.")
     import tkinter as tk
@@ -156,7 +164,7 @@ def main():
     actions.pack()
 
     def reopen():
-        if not open_ui(URL):
+        if not open_ui(URL + "/#setup=" + token):
             messagebox.showwarning("Moímetro",
                                    "Se necesita un navegador compatible (Firefox, Edge o Chrome).\n"
                                    "Internet Explorer no es compatible.")
