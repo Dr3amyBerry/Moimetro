@@ -97,7 +97,7 @@ def main():
             from app.main import app, static_dir
             if not (static_dir / "index.html").is_file():
                 raise RuntimeError("No se empaquetó el frontend.")
-            if not any(route.path == "/api/health" for route in app.routes):
+            if not any(getattr(route, "path", None) == "/api/health" for route in app.routes):
                 raise RuntimeError("Falta API local.")
         except Exception:
             # CI GUI executable has no console. Keep a sanitized diagnostic.
