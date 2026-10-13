@@ -117,6 +117,7 @@ def init_db():
         if db.execute("PRAGMA user_version").fetchone()[0] < 1:
             db.execute("INSERT INTO patients_fts(patients_fts) VALUES('rebuild')")
             db.execute("PRAGMA user_version=1")
+            db.commit()
         db.execute("PRAGMA journal_mode=WAL")
 
 def audit(db, user_id, action, resource, resource_id):
