@@ -22,7 +22,7 @@
 | Firmware de sensores | `firmware/src/main.cpp` | Compilación CI de versión inicial exitosa; pruebas físicas pendientes |
 | API del ESP32 | `app/api/sensors.py` | Contrato implementado con validación de sesión y estado |
 | Medición vinculada a consulta | `capture_sessions`, `measurements` | Implementación y pruebas automatizadas; integración física pendiente |
-| Detección/SpO₂ | SpO₂ simulado eliminado; API rechaza SpO₂ del ESP32 | Mitigación del falso valor aplicada; SpO₂ real **no implementado** |
+| Detección/SpO₂ | Firmware calcula R real a partir de PPG rojo/IR con 100 muestras, control de calidad y curva configurable; API continúa rechazando SpO₂ del ESP32 | Procesamiento y pruebas sintéticas implementados; calibración en hardware y validación clínica **pendientes** |
 | Triaje | Ruta informa `not_validated` sin prioridad | **Bloqueado hasta revisión clínica** |
 | Respaldo | `python -m app.manage backup` y `verify-backup` | Respaldo y verificación inicial; restauración cifrada/ensayada pendiente |
 | Instalación Windows 7+ | `app/launcher.py`, `app/api/setup.py`, `packaging/windows/Moimetro.iss`, workflow `windows-installer.yml` | Instaladores legacy x86, legacy x64 y moderno x64 compilados con éxito y comprobados automáticamente en [GitHub Actions](https://github.com/Dr3amyBerry/Moimetro/actions/runs/38339354245). Pruebas físicas en Windows 7 SP1 aún pendientes; no usar datos médicos reales en Win7. |
@@ -122,7 +122,7 @@ Por tanto, lo siguiente describe **intenciones o lógica del prototipo compartid
 | DS18B20 / GPIO 4 | Funciones para temperatura por OneWire | `NO VERIFICADO` |
 | MAX30102 / I²C SDA 21, SCL 22 | Lectura IR y detección de latidos | `NO VERIFICADO` |
 | BPM | Media de hasta cuatro intervalos/latidos | `NO VERIFICADO` |
-| SpO₂ | **Valor fijo de 98 % dependiente de BPM: medición falsa** | `NO IMPLEMENTADO` |
+| SpO₂ | **Original: 98 % fijo derivado de BPM (falso). Actual: R real del MAX30102, salida clínica bloqueada hasta calibración.** | `R IMPLEMENTADO; SpO₂ CLÍNICO NO VALIDADO` |
 | HTML de monitorización | Tarjetas que recargan cada 3 s | `NO VERIFICADO` |
 | BD, expedientes, triaje, roles, auditoría | No aparecen en el código compartido | `PENDIENTE` |
 
@@ -223,7 +223,7 @@ Cada bloque deberá abrir o registrar sus tareas con identificador, responsable,
 - [ ] `DEV-011` Validar DS18B20; errores `-127 °C`, desconexiones, precisión y método de contacto.
 - [ ] `DEV-012` Detectar MAX30102 y probar LED IR/rojo y calidad de señal.
 - [ ] `DEV-013` Corregir BPM, manejo de primeros latidos, promedios, ausencia de dedo y caducidad.
-- [ ] `DEV-014` **Eliminar SpO₂ ficticio**. Implementar cálculo real o dejar `NO DISPONIBLE` hasta validación.
+- [x] `DEV-014` **Eliminar SpO₂ ficticio y procesar R real**: adquirido Rojo/IR en FIFO, cálculo de relación de razones y descarte de ruido; no enviar porcentajes a pacientes. Calibración y validación clínica pendientes (`QA-012`).
 - [ ] `DEV-015` Implementar estados por sensor: `OK`, `SIN_CONTACTO`, `NO_DISPONIBLE`, `ERROR`, `CADUCADO`.
 - [ ] `DEV-016` Evitar bloqueos de adquisición/servidor, incorporar reconexión y recuperación de errores.
 - [ ] `DEV-017` Comparar mediciones con instrumentos de referencia y registrar limitaciones.
@@ -439,7 +439,7 @@ El registro operativo por tarea debe seguir este formato:
 
 | ID | Responsable | Prioridad | Estado | Dependencia | Evidencia |
 |---|---|---|---|---|---|
-| DEV-014 | Desarrollo | P0 | PENDIENTE | DEV-012 | — |
+| DEV-014 | Desarrollo | P0 | PARCIAL (R implementado, calibración pendiente) | DEV-012 | `firmware/include/spo2_estimator.h`, `firmware/tests/test_spo2_estimator.cpp` |
 | DEV-031 | Desarrollo | P1 | PENDIENTE | ARQ-002 / ARQ-005 | — |
 | DEV-060 | Desarrollo + revisión clínica | P0 | PENDIENTE | ARQ-006 | — |
 | DOC-01 | Documentación | P1 | PENDIENTE | Ninguna | — |
