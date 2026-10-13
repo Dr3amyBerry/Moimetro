@@ -10,10 +10,10 @@
 - Clave específica del dispositivo con comparación resistente a filtrado temporal básico.
 - Consultas SQL con parámetros y límites de datos mediante Pydantic.
 - Auditoría de accesos a expedientes y operaciones principales, separada de notas clínicas.
-- Base local no incluida en Git y credenciales del firmware omitidas por \`.gitignore\`.
+- Base local no incluida en Git y credenciales del firmware omitidas por `.gitignore`.
 - Rutas API sin CORS abierto; frontend servido desde el mismo origen.
 - Cabeceras CSP, X-Frame-Options, X-Content-Type-Options y no-cache básico.
-- CLI para copia SQLite coherente, \`PRAGMA integrity_check\` y rechazo de sobreescritura.
+- CLI para copia SQLite coherente, `PRAGMA integrity_check` y rechazo de sobreescritura.
 
 ## Brechas importantes para un despliegue real
 
@@ -33,17 +33,17 @@
 
 ## Respaldo local
 
-\`\`\`bash
+```bash
 python -m app.manage backup --output /ruta/segura/respaldo-2026-10-12.sqlite3
 python -m app.manage verify-backup --input /ruta/segura/respaldo-2026-10-12.sqlite3
-\`\`\`
+```
 
-**Precaución:** los respaldos actuales NO están cifrados. Solo hacerlos con datos ficticios o en ambiente protegido según política aprobada. \`verify-backup\` comprueba coherencia estructural, **no demuestra que el proceso de restauración funcione**. La operación de restauración deliberadamente no se automatizó sin procedimiento y controles humanos.
+**Precaución:** los respaldos actuales NO están cifrados. Solo hacerlos con datos ficticios o en ambiente protegido según política aprobada. `verify-backup` comprueba coherencia estructural, **no demuestra que el proceso de restauración funcione**. La operación de restauración deliberadamente no se automatizó sin procedimiento y controles humanos.
 
 ## Reglas para el equipo
 
 1. No subir cédulas, contraseñas, claves del dispositivo, capturas con datos de pacientes ni bases SQLite al repositorio.
-2. No exponer \`uvicorn --host 0.0.0.0\` fuera de una LAN de laboratorio aislada.
+2. No exponer `uvicorn --host 0.0.0.0` fuera de una LAN de laboratorio aislada.
 3. Cambiar de inmediato claves usadas por error en capturas o repositorios; ocultar el archivo no revoca credenciales publicadas.
 4. Trabajar con pacientes **ficticios** hasta que exista revisión de privacidad, seguridad y validación clínica.
 5. Mantener separadas las pruebas técnicas de la documentación de capacidades clínicas reales.
