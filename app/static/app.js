@@ -69,6 +69,7 @@ function showWork() {
   el("loginScreen").hidden = true;
   el("workScreen").hidden = false;
   el("logoutButton").hidden = false;
+  el("adminSection").hidden = state.role !== "admin";
   el("identity").textContent = state.username + " · " + state.role;
 }
 
@@ -263,6 +264,11 @@ el("historyForm").addEventListener("submit", safe(async e => {
     method: "PUT", body: JSON.stringify(formValue(e.target))
   });
   toast("Antecedentes actualizados.");
+}));
+el("staffForm").addEventListener("submit", safe(async e => {
+  await api("/api/admin/users", { method: "POST", body: JSON.stringify(formValue(e.target)) });
+  e.target.reset();
+  toast("Cuenta de personal creada.");
 }));
 el("encounterForm").addEventListener("submit", safe(async e => {
   if (!state.patient) return;
