@@ -25,7 +25,7 @@
 | Detección/SpO₂ | SpO₂ simulado eliminado; API rechaza SpO₂ del ESP32 | Mitigación del falso valor aplicada; SpO₂ real **no implementado** |
 | Triaje | Ruta informa `not_validated` sin prioridad | **Bloqueado hasta revisión clínica** |
 | Respaldo | `python -m app.manage backup` y `verify-backup` | Respaldo y verificación inicial; restauración cifrada/ensayada pendiente |
-| Instalación Windows 7+ | `app/launcher.py`, `app/api/setup.py`, `packaging/windows/Moimetro.iss`, workflow `windows-installer.yml` | Implementado en código: instaladores x86/x64 legacy y x64 moderno; pruebas CI y ensayos reales de Windows 7 pendientes. No apto para pacientes reales en Win7. |
+| Instalación Windows 7+ | `app/launcher.py`, `app/api/setup.py`, `packaging/windows/Moimetro.iss`, workflow `windows-installer.yml` | Instaladores legacy x86, legacy x64 y moderno x64 compilados con éxito y comprobados automáticamente en [GitHub Actions](https://github.com/Dr3amyBerry/Moimetro/actions/runs/38339354245). Pruebas físicas en Windows 7 SP1 aún pendientes; no usar datos médicos reales en Win7. |
 | Documentación paralela | `docs/ARCHITECTURE.md`, `SEGURIDAD.md`, `VALIDACION.md`, `DOCUMENTACION_ROADMAP.md`, `MANUAL_USUARIO.md` | Borradores y matrices preparados; informes definitivos pendientes |
 
 ### Interpretación de estados
