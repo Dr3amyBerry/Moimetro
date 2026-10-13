@@ -2,7 +2,7 @@
 
 > **Documento rector:** desarrollo tecnológico y documentación técnica/académica del sistema Moímetro.  
 > **Proyecto:** Consultorio Popular Tipo III Las Cayenas.  
-> **Versión del plan:** 1.1 — 2026-10-12.  
+> **Versión del plan:** 1.2 — 2026-10-12.  
 > **Estado global:** prototipo de firmware y aplicación local incorporado en código; validación física, seguridad clínica y puesta en marcha aún pendientes.  
 > **Fuente inicial:** definición funcional y sketch de ESP32 compartidos por el equipo del proyecto.  
 > **Regla de evidencias:** una funcionalidad **no** se marca como completada sin código versionado, pruebas reproducibles y evidencia verificable.
@@ -25,6 +25,7 @@
 | Detección/SpO₂ | SpO₂ simulado eliminado; API rechaza SpO₂ del ESP32 | Mitigación del falso valor aplicada; SpO₂ real **no implementado** |
 | Triaje | Ruta informa `not_validated` sin prioridad | **Bloqueado hasta revisión clínica** |
 | Respaldo | `python -m app.manage backup` y `verify-backup` | Respaldo y verificación inicial; restauración cifrada/ensayada pendiente |
+| Instalación Windows 7+ | `app/launcher.py`, `app/api/setup.py`, `packaging/windows/Moimetro.iss`, workflow `windows-installer.yml` | Implementado en código: instaladores x86/x64 legacy y x64 moderno; pruebas CI y ensayos reales de Windows 7 pendientes. No apto para pacientes reales en Win7. |
 | Documentación paralela | `docs/ARCHITECTURE.md`, `SEGURIDAD.md`, `VALIDACION.md`, `DOCUMENTACION_ROADMAP.md`, `MANUAL_USUARIO.md` | Borradores y matrices preparados; informes definitivos pendientes |
 
 ### Interpretación de estados
@@ -484,3 +485,4 @@ Los demás IDs definidos en las fases también empiezan en `PENDIENTE`; esta tab
 |---|---|---|
 | 2026-10-12 | 1.0 | Creación del plan maestro desde requisitos compartidos y sketch de referencia; se deja todo el trabajo como pendiente hasta obtener evidencia en el repositorio. |
 | 2026-10-12 | 1.1 | Se incorpora estado v0.1 de firmware, API, interfaz local, SQLite, expedientes, seguridad inicial, pruebas CI y documentación, preservando pendientes físicos/clínicos. |
+| 2026-10-12 | 1.2 | Se implementa vía GitHub Actions distribución por instalador `.exe` de Windows 7 SP1+ y sistemas modernos, con almacenamiento persistente por usuario y alta inicial; compatibilidad física y seguridad clínica pendientes. |
