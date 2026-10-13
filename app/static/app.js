@@ -26,6 +26,14 @@ async function checkFirstRun() {
 
 const state = { token: null, role: "", username: "", patient: null,
                 encounter: null, capture: null };
+
+// List state stays bounded regardless of the number of records in SQLite.
+const directory = { cursor: null, previous: [], page: 1, next: null, request: 0 };
+const visits = { cursor: null, previous: [], page: 1, next: null, request: 0 };
+let selectedPatientVersion = 0;
+const DIRECTORY_LIMIT = 25;
+const VISIT_LIMIT = 15;
+
 const mayMeasure = () => ["admin", "nurse", "clinician"].includes(state.role);
 const mayClinicallyEdit = () => ["admin", "clinician"].includes(state.role);
 const labels = {
@@ -96,7 +104,30 @@ function setActiveView(view) {
   }
 }
 
+function showScreen(area) {
+  const screens = {
+    directory: "directoryScreen",
+    registration: "registrationScreen",
+    patient: "patientScreen",
+    staff: "adminSection"
+  };
+  if (!Object.prototype.hasOwnProperty.call(screens, area)) return;
+  for (const [name, id] of Object.entries(screens)) {
+    el(id).hidden = name !== area;
+  }
+  const active = area === "staff" ? "navStaff" : "navPatients";
+  for (const id of ["navPatients", "navStaff"]) {
+    const node = el(id);
+    node.classList.toggle("selected", id === active);
+    if (id === active) node.setAttribute("aria-current", "page");
+    else node.removeAttribute("aria-current");
+  }
+}
+
 function showLogin() {
+  ++directory.request;
+  ++visits.request;
+  ++selectedPatientVersion;
   el("loginScreen").hidden = false;
   el("workScreen").hidden = true;
   el("logoutButton").hidden = true;
@@ -104,82 +135,157 @@ function showLogin() {
   state.patient = null;
   state.encounter = null;
   state.capture = null;
+  state.role = "";
   el("patientWork").hidden = true;
-  el("emptyState").hidden = false;
-  el("patientTitle").textContent = "Pacientes";
-  el("patientDetails").textContent = "Selecciona un paciente para comenzar.";
+  showScreen("directory");
 }
+
 function showWork() {
   el("loginScreen").hidden = true;
   el("workScreen").hidden = false;
   el("logoutButton").hidden = false;
-  el("adminSection").hidden = state.role !== "admin";
+  el("navStaff").hidden = state.role !== "admin";
   const roles = { admin: "Administración", reception: "Recepción",
                   nurse: "Enfermería", clinician: "Medicina" };
   el("identity").textContent = state.username + " · " + (roles[state.role] || state.role);
-  el("emptyState").hidden = Boolean(state.patient);
+  showScreen("directory");
+}
+
+function resetDirectoryPages() {
+  directory.cursor = null;
+  directory.previous = [];
+  directory.page = 1;
+  directory.next = null;
+}
+
+function resetVisitPages() {
+  visits.cursor = null;
+  visits.previous = [];
+  visits.page = 1;
+  visits.next = null;
+  ++visits.request;
+}
+
+function addCell(row, value) {
+  const td = document.createElement("td");
+  td.textContent = value == null || value === "" ? "—" : String(value);
+  row.appendChild(td);
+  return td;
 }
 
 async function loadPatients() {
+  const request = ++directory.request;
   const q = el("search").value.trim();
-  const patients = await api("/api/patients?q=" + encodeURIComponent(q));
+  const type = el("directoryDocumentType").value;
+  const query = new URLSearchParams({ limit: String(DIRECTORY_LIMIT) });
+  if (q) query.set("q", q);
+  if (type) query.set("document_type", type);
+  if (directory.cursor) query.set("before", String(directory.cursor));
+  el("directoryStatus").textContent = "Buscando pacientes…";
+  const result = await api("/api/patients/directory?" + query.toString());
+  if (request !== directory.request || !state.token) return;
+  directory.next = result.next_cursor;
   const list = el("patientList");
   clearChildren(list);
-  if (!patients.length) {
-    const p = document.createElement("p");
-    p.className = "muted";
-    p.textContent = "No hay pacientes para esta búsqueda.";
-    list.appendChild(p);
+  if (!result.items.length) {
+    const tr = document.createElement("tr");
+    const td = addCell(tr, q || type ? "No se encontraron pacientes. Cambia la búsqueda o los filtros." :
+      "Todavía no hay pacientes registrados.");
+    td.colSpan = 6;
+    td.className = "empty-table-cell";
+    list.appendChild(tr);
   }
-  for (const patient of patients) {
-    list.appendChild(button(patient.full_name,
-      patient.document_type + "-" + patient.document_number,
-      () => selectPatient(patient.id), state.patient?.id === patient.id));
+  for (const patient of result.items) {
+    const tr = document.createElement("tr");
+    const name = document.createElement("td");
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "table-patient-link";
+    open.textContent = patient.full_name;
+    open.addEventListener("click", () => selectPatient(patient.id).catch(error => toast(error.message, true)));
+    name.appendChild(open);
+    tr.appendChild(name);
+    addCell(tr, patient.document_type + "-" + patient.document_number);
+    addCell(tr, patient.birth_date);
+    addCell(tr, patient.phone);
+    addCell(tr, patient.visits);
+    const action = document.createElement("td");
+    const view = document.createElement("button");
+    view.type = "button";
+    view.className = "button button-table";
+    view.textContent = "Abrir";
+    view.setAttribute("aria-label", "Abrir expediente de " + patient.full_name);
+    view.addEventListener("click", () => selectPatient(patient.id).catch(error => toast(error.message, true)));
+    action.appendChild(view);
+    tr.appendChild(action);
+    list.appendChild(tr);
   }
+  const count = result.items.length;
+  el("directoryStatus").textContent =
+    count + (count === 1 ? " registro en esta página" : " registros en esta página")
+    + (q ? " · Búsqueda: " + q : "")
+    + (type ? " · Documento: " + type : "");
+  el("directoryPageLabel").textContent = "Página " + directory.page;
+  el("directoryPrev").disabled = directory.previous.length === 0;
+  el("directoryNext").disabled = !directory.next;
 }
 
 async function selectPatient(id) {
-  state.patient = await api("/api/patients/" + id);
+  const version = ++selectedPatientVersion;
+  const selected = await api("/api/patients/" + id);
+  const history = await api("/api/patients/" + id + "/history");
+  if (version !== selectedPatientVersion || !state.token) return;
+  state.patient = selected;
   state.encounter = null;
   state.capture = null;
-  el("patientTitle").textContent = state.patient.full_name;
+  resetVisitPages();
+  el("patientTitle").textContent = selected.full_name;
   el("patientDetails").textContent =
-    "Documento " + state.patient.document_type + "-" + state.patient.document_number +
-    (state.patient.birth_date ? " · Nacimiento: " + state.patient.birth_date : "");
-  el("patientEditForm").elements.full_name.value = state.patient.full_name;
-  el("patientEditForm").elements.birth_date.value = state.patient.birth_date || "";
-  el("patientEditForm").elements.phone.value = state.patient.phone || "";
-  const history = await api("/api/patients/" + id + "/history");
+    "Documento " + selected.document_type + "-" + selected.document_number +
+    (selected.birth_date ? " · Nacimiento: " + selected.birth_date : "");
+  el("patientEditForm").elements.full_name.value = selected.full_name;
+  el("patientEditForm").elements.birth_date.value = selected.birth_date || "";
+  el("patientEditForm").elements.phone.value = selected.phone || "";
   el("historyForm").elements.allergies.value = history.allergies;
   el("historyForm").elements.background.value = history.background;
   for (const control of el("historyForm").querySelectorAll("textarea,button")) {
     control.disabled = !mayClinicallyEdit();
   }
   el("patientWork").hidden = false;
-  el("emptyState").hidden = true;
   el("encounterWork").hidden = true;
   el("encounterEmpty").hidden = false;
   setActiveView("overview");
-  await Promise.all([loadEncounters(), loadPatients()]);
+  showScreen("patient");
+  await loadEncounters();
 }
 
 async function loadEncounters() {
   if (!state.patient) return;
-  const visits = await api("/api/encounters?patient_id=" + state.patient.id);
+  const patientId = state.patient.id;
+  const request = ++visits.request;
+  const query = new URLSearchParams({ patient_id: String(patientId),
+    limit: String(VISIT_LIMIT) });
+  if (visits.cursor) query.set("before", String(visits.cursor));
+  const result = await api("/api/encounters/directory?" + query.toString());
+  if (request !== visits.request || patientId !== state.patient?.id || !state.token) return;
+  visits.next = result.next_cursor;
   const list = el("encounterList");
   clearChildren(list);
-  if (!visits.length) {
+  if (!result.items.length) {
     const p = document.createElement("p");
     p.className = "muted";
-    p.textContent = "No hay consultas anteriores.";
+    p.textContent = "No hay consultas en esta página.";
     list.appendChild(p);
   }
-  for (const visit of visits) {
+  for (const visit of result.items) {
     list.appendChild(button("Consulta #" + visit.id + " · " +
       (visit.status === "open" ? "Abierta" : "Cerrada"),
       dateText(visit.opened_at) + " · " + visit.reason,
       () => selectEncounter(visit.id), state.encounter?.id === visit.id));
   }
+  el("visitPageLabel").textContent = "Página " + visits.page;
+  el("visitListPrev").disabled = visits.previous.length === 0;
+  el("visitListNext").disabled = !visits.next;
 }
 
 async function selectEncounter(id) {
@@ -319,10 +425,72 @@ el("logoutButton").addEventListener("click", safe(async () => {
   try { await api("/api/auth/logout", { method: "POST" }); }
   finally { state.token = null; showLogin(); }
 }));
-el("searchButton").addEventListener("click", safe(loadPatients));
-el("search").addEventListener("keydown", e => {
-  if (e.key === "Enter") { e.preventDefault(); loadPatients().catch(error => toast(error.message, true)); }
+el("navPatients").addEventListener("click", safe(async () => {
+  showScreen("directory");
+  await loadPatients();
+}));
+el("navStaff").addEventListener("click", () => {
+  if (state.role === "admin") showScreen("staff");
 });
+el("newPatientButton").addEventListener("click", () => showScreen("registration"));
+el("cancelPatientButton").addEventListener("click", safe(async () => {
+  showScreen("directory");
+  await loadPatients();
+}));
+el("backToDirectory").addEventListener("click", safe(async () => {
+  showScreen("directory");
+  await loadPatients();
+}));
+el("searchButton").addEventListener("click", safe(async () => {
+  resetDirectoryPages();
+  await loadPatients();
+}));
+let searchTimer = null;
+el("search").addEventListener("input", () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    resetDirectoryPages();
+    loadPatients().catch(error => toast(error.message, true));
+  }, 350);
+});
+el("search").addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    clearTimeout(searchTimer);
+    resetDirectoryPages();
+    loadPatients().catch(error => toast(error.message, true));
+  }
+});
+el("directoryDocumentType").addEventListener("change", safe(async () => {
+  resetDirectoryPages();
+  await loadPatients();
+}));
+el("directoryNext").addEventListener("click", safe(async () => {
+  if (!directory.next) return;
+  directory.previous.push(directory.cursor);
+  directory.cursor = directory.next;
+  directory.page++;
+  await loadPatients();
+}));
+el("directoryPrev").addEventListener("click", safe(async () => {
+  if (!directory.previous.length) return;
+  directory.cursor = directory.previous.pop();
+  directory.page--;
+  await loadPatients();
+}));
+el("visitListNext").addEventListener("click", safe(async () => {
+  if (!visits.next || !state.patient) return;
+  visits.previous.push(visits.cursor);
+  visits.cursor = visits.next;
+  visits.page++;
+  await loadEncounters();
+}));
+el("visitListPrev").addEventListener("click", safe(async () => {
+  if (!visits.previous.length || !state.patient) return;
+  visits.cursor = visits.previous.pop();
+  visits.page--;
+  await loadEncounters();
+}));
 el("patientForm").addEventListener("submit", safe(async e => {
   const form = formValue(e.target);
   const created = await api("/api/patients", {
@@ -332,7 +500,6 @@ el("patientForm").addEventListener("submit", safe(async e => {
   e.target.reset();
   toast("Paciente registrado.");
   await selectPatient(created.id);
-  el("newPatientDetails").open = false;
 }));
 el("patientEditForm").addEventListener("submit", safe(async e => {
   if (!state.patient) return;
