@@ -306,6 +306,7 @@ el("patientEditForm").addEventListener("submit", safe(async e => {
     })
   });
   await selectPatient(state.patient.id);
+  setActiveView("profile");
   toast("Datos personales actualizados.");
 }));
 el("historyForm").addEventListener("submit", safe(async e => {
