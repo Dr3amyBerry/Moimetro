@@ -49,6 +49,17 @@
         <div><p class="eyebrow">Expediente local</p><h1 id="patientTitle">Seleccione un paciente</h1><p id="patientDetails" class="muted">Utilice la búsqueda o cree un registro nuevo.</p></div>
       </section>
       <div id="patientWork" hidden>
+        <section class="panel">
+          <h2>Antecedentes y alergias</h2>
+          <p class="muted">La información de este apartado debe ser verificada por el personal autorizado.</p>
+          <form id="historyForm">
+            <div class="columns">
+              <label>Alergias<textarea name="allergies" rows="3" placeholder="Describir alergias conocidas; no asumir ausencia"></textarea></label>
+              <label>Antecedentes clínicos<textarea name="background" rows="3" placeholder="Antecedentes aportados y confirmados por el personal"></textarea></label>
+            </div>
+            <button class="secondary" type="submit">Guardar antecedentes</button>
+          </form>
+        </section>
         <div class="columns">
           <section class="panel">
             <h2>Iniciar consulta</h2>
