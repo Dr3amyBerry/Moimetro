@@ -92,7 +92,7 @@ function setActiveView(view) {
     profile: "viewProfile",
     consultation: "viewEncounter"
   };
-  if (!Object.hasOwn(views, view)) return;
+  if (!Object.prototype.hasOwnProperty.call(views, view)) return;
   for (const [name, id] of Object.entries(views)) {
     el(id).hidden = name !== view;
   }
