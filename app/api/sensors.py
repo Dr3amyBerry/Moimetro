@@ -4,7 +4,8 @@ import math
 import os
 import secrets
 import sqlite3
-from typing import Annotated, Literal
+from typing import List, Literal, Optional
+from typing_extensions import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -78,14 +79,14 @@ BOUNDS = {
 class DeviceSample(BaseModel):
     kind: Kind
     quality: Quality
-    value: float | None = None
+    value: Optional[float] = None
 
 class DeviceBatch(BaseModel):
     session_id: str = Field(min_length=10, max_length=100)
     device_id: str = Field(min_length=1, max_length=80)
-    samples: list[DeviceSample] = Field(min_length=1, max_length=10)
+    samples: List[DeviceSample] = Field(min_length=1, max_length=10)
 
-def validate_sample(kind: str, quality: str, value: float | None):
+def validate_sample(kind: str, quality: str, value: Optional[float]):
     if quality != "ok":
         if value is not None:
             raise HTTPException(422, "Una lectura inválida no puede incluir un número.")
