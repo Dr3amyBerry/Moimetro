@@ -113,3 +113,44 @@ def test_security_and_traceability_controls_in_interface():
     assert "/revisions?" in JS
     assert "textContent = entry" not in JS  # metadata is composed safely
     assert "innerHTML" not in JS
+
+
+def test_bounded_panels_and_external_overlay_actions():
+    page = document()
+    assert {"manualMeasureDialog", "manualMeasureButton", "cancelManualMeasure",
+            "measurementList", "measurementPageLabel", "measurementPrev",
+            "measurementNext"}.issubset(set(page.ids))
+    assert "<details" not in HTML and "<summary" not in HTML
+    for dialog in ("manualMeasureDialog", "staffManagePanel",
+                   "staffCreatePanel", "accountPanel"):
+        assert re.search(
+            r'<section id="' + dialog +
+            r'"[^>]*class="account-overlay"[^>]*role="dialog"[^>]*aria-modal="true"',
+            HTML
+        ), dialog
+    assert 'id="manualForm"' in HTML
+    assert "function openDialog(id)" in JS
+    assert "function closeDialog(id" in JS
+    assert 'event.key === "Escape"' in JS
+    assert '"Tab"' in JS
+    assert "body.modal-open" in CSS
+    assert "#patientScreen .view-panel" in CSS
+    assert "overflow-y: auto;" in CSS
+    assert ".reading-scroller" in CSS
+    assert ".directory-panel > .table-scroller" in CSS
+    assert "MEASUREMENT_LIMIT = 25" in JS
+    assert "measurementPaging.next" in JS
+    assert "response.slice(0, MEASUREMENT_LIMIT)" in JS
+    assert "innerHTML" not in JS
+
+
+def test_measurement_editor_is_outside_patient_grid():
+    patient_end = HTML.index('id="accountPanel"')
+    manual_start = HTML.index('id="manualMeasureDialog"')
+    consultation_start = HTML.index('id="viewEncounter"')
+    assert consultation_start < manual_start < patient_end
+    # The only editor for manual measurements is a floating dialog, not a
+    # field that increases the height of a consultation-grid cell.
+    consultation_markup = HTML[consultation_start:manual_start]
+    assert "manualMeasureButton" in consultation_markup
+    assert '<form id="manualForm"' not in consultation_markup
