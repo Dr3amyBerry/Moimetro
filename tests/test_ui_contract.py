@@ -97,3 +97,19 @@ def test_enterprise_directory_replaces_demo_sidebar():
     assert "staffCreatePanel" in page.ids
     assert '/api/admin/users?' in JS
     assert "textContent = patient.full_name" in JS
+
+
+def test_security_and_traceability_controls_in_interface():
+    page = document()
+    required = {"changePasswordButton", "accountPanel", "passwordForm",
+                "staffManageForm", "staffManagePanel", "cancelStaffManage",
+                "staffManageTitle", "revisionPanel", "revisionList",
+                "revisionNext", "revisionPrev", "revisionPageLabel"}
+    assert required.issubset(set(page.ids)), required - set(page.ids)
+    assert "passwordForm" in page.forms
+    assert "staffManageForm" in page.forms
+    assert "/api/auth/change-password" in JS
+    assert "/api/admin/users/" in JS
+    assert "/revisions?" in JS
+    assert "textContent = entry" not in JS  # metadata is composed safely
+    assert "innerHTML" not in JS
