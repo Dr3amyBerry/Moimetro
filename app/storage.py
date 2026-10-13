@@ -1,6 +1,7 @@
 """Local SQLite database for Moímetro. Keep all patient data outside Git."""
 from __future__ import annotations
 import os
+import json
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -81,6 +82,23 @@ CREATE TABLE IF NOT EXISTS audit_events (
  resource TEXT NOT NULL, resource_id TEXT NOT NULL, created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_events(created_at);
+CREATE TABLE IF NOT EXISTS record_revisions (
+ id INTEGER PRIMARY KEY,
+ patient_id INTEGER NOT NULL REFERENCES patients(id),
+ encounter_id INTEGER REFERENCES encounters(id),
+ resource TEXT NOT NULL CHECK(resource IN ('patient','history','encounter')),
+ actor_id INTEGER NOT NULL REFERENCES users(id),
+ reason TEXT NOT NULL,
+ before_json TEXT NOT NULL,
+ after_json TEXT NOT NULL,
+ created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_revisions_patient ON record_revisions(patient_id,id DESC);
+CREATE INDEX IF NOT EXISTS idx_revisions_encounter ON record_revisions(encounter_id,id DESC);
+CREATE TRIGGER IF NOT EXISTS revisions_no_update BEFORE UPDATE ON record_revisions
+ BEGIN SELECT RAISE(ABORT,'Clinical revisions are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS revisions_no_delete BEFORE DELETE ON record_revisions
+ BEGIN SELECT RAISE(ABORT,'Clinical revisions are append-only'); END;
 """
 
 # Prefix-aware full-text search keeps surname/document lookup usable when the
@@ -123,6 +141,26 @@ def init_db():
 def audit(db, user_id, action, resource, resource_id):
     db.execute("INSERT INTO audit_events(user_id,action,resource,resource_id,created_at) VALUES(?,?,?,?,?)",
                (user_id, action, resource, str(resource_id), now()))
+
+def record_revision(db, actor_id, patient_id, resource, before, after,
+                    reason, encounter_id=None):
+    """Append an immutable before/after snapshot in the same transaction.
+
+    Contains sensitive data: keep the database and backups protected. Never put
+    snapshots in audit_events (which are visible to administrators).
+    """
+    if before == after:
+        return False
+    db.execute(
+        """INSERT INTO record_revisions
+           (patient_id,encounter_id,resource,actor_id,reason,
+            before_json,after_json,created_at) VALUES(?,?,?,?,?,?,?,?)""",
+        (patient_id, encounter_id, resource, actor_id, reason,
+         json.dumps(before, ensure_ascii=False, sort_keys=True),
+         json.dumps(after, ensure_ascii=False, sort_keys=True), now())
+    )
+    return True
+
 
 def rows(cursor):
     return [dict(row) for row in cursor.fetchall()]
