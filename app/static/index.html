@@ -25,8 +25,23 @@
     <section class="login-card panel">
       <div class="login-symbol" aria-hidden="true">M</div>
       <p class="section-kicker">Acceso al sistema</p>
-      <h1>Iniciar sesión</h1>
+      <h1 id="loginHeading">Iniciar sesión</h1>
       <p class="muted">Consultorio Popular Tipo III Las Cayenas</p>
+      <section id="setupPanel" hidden>
+        <p class="muted">Crea el administrador inicial. Solo se realiza una vez.</p>
+        <form id="setupForm" class="form-stack">
+          <label>Usuario administrador
+            <input name="username" autocomplete="username" pattern="[A-Za-z0-9_]+" minlength="3" maxlength="50" value="admin" required>
+          </label>
+          <label>Contraseña (mínimo 12 caracteres)
+            <input name="password" type="password" autocomplete="new-password" minlength="12" required>
+          </label>
+          <label>Repetir contraseña
+            <input name="confirm" type="password" autocomplete="new-password" minlength="12" required>
+          </label>
+          <button type="submit" class="button button-primary button-wide">Crear administrador</button>
+        </form>
+      </section>
       <form id="loginForm" class="form-stack">
         <label>Usuario<input name="username" autocomplete="username" minlength="3" required></label>
         <label>Contraseña<input name="password" type="password" autocomplete="current-password" required></label>
