@@ -39,6 +39,11 @@ CREATE TABLE IF NOT EXISTS patients (
  full_name TEXT NOT NULL, birth_date TEXT, phone TEXT, created_at TEXT NOT NULL,
  UNIQUE(document_type,document_number)
 );
+CREATE TABLE IF NOT EXISTS patient_histories (
+ patient_id INTEGER PRIMARY KEY REFERENCES patients(id) ON DELETE CASCADE,
+ allergies TEXT NOT NULL DEFAULT '', background TEXT NOT NULL DEFAULT '',
+ updated_at TEXT NOT NULL, updated_by INTEGER REFERENCES users(id)
+);
 CREATE TABLE IF NOT EXISTS encounters (
  id INTEGER PRIMARY KEY, patient_id INTEGER NOT NULL REFERENCES patients(id),
  created_by INTEGER NOT NULL REFERENCES users(id), reason TEXT NOT NULL,
