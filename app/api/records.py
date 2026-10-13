@@ -49,6 +49,48 @@ def list_patients(db: DB, user: User, q: str = Query(default="", max_length=100)
     db.commit()
     return result
 
+@router.get("/patients/directory")
+def patient_directory(
+    db: DB,
+    user: User,
+    q: str = Query(default="", max_length=100),
+    limit: int = Query(default=25, ge=1, le=50),
+    before: Optional[int] = Query(default=None, ge=1),
+):
+    """Seek-paginated directory. No unbounded records or patient data caching.
+
+    Stable descending-ID ordering allows fast navigation deep into a large
+    database without OFFSET scans or loading the full directory in memory.
+    """
+    search = q.strip()
+    filters = []
+    values = []
+    if search:
+        # Treat %, _ and backslash literally in LIKE, rather than as wildcards.
+        escaped = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        prefix = escaped + "%"
+        filters.append("(p.full_name LIKE ? ESCAPE '\\' OR p.document_number LIKE ? ESCAPE '\\')")
+        values.extend((prefix, prefix))
+    if before is not None:
+        filters.append("p.id < ?")
+        values.append(before)
+    where = " WHERE " + " AND ".join(filters) if filters else ""
+    found = rows(db.execute(
+        """SELECT p.id,p.full_name,p.document_type,p.document_number,
+                  p.birth_date,p.phone,
+                  (SELECT COUNT(*) FROM encounters e WHERE e.patient_id=p.id) AS visits
+           FROM patients p""" + where +
+        " ORDER BY p.id DESC LIMIT ?",
+        (*values, limit + 1),
+    ))
+    has_more = len(found) > limit
+    visible = found[:limit]
+    audit(db, user["id"], "search", "patients", "directory")
+    db.commit()
+    return {"items": visible, "next_cursor": visible[-1]["id"] if has_more else None,
+            "page_size": limit, "has_more": has_more}
+
+
 @router.post("/patients", status_code=201)
 def new_patient(payload: PatientCreate, db: DB, user: User):
     number = payload.document_number.strip().upper()
@@ -100,6 +142,30 @@ def patient_encounters(patient_id: int, db: DB, user: User):
     audit(db, user["id"], "list", "encounter", patient_id)
     db.commit()
     return result
+
+@router.get("/encounters/directory")
+def encounter_directory(
+    patient_id: int,
+    db: DB,
+    user: User,
+    limit: int = Query(default=15, ge=1, le=50),
+    before: Optional[int] = Query(default=None, ge=1),
+):
+    """Bounded clinical history list with seek pagination per patient."""
+    patient_or_404(db, patient_id)
+    query = "SELECT * FROM encounters WHERE patient_id=?"
+    args = [patient_id]
+    if before is not None:
+        query += " AND id<?"
+        args.append(before)
+    found = rows(db.execute(query + " ORDER BY id DESC LIMIT ?", (*args, limit + 1)))
+    has_more = len(found) > limit
+    visible = found[:limit]
+    audit(db, user["id"], "list", "encounter", patient_id)
+    db.commit()
+    return {"items": visible, "next_cursor": visible[-1]["id"] if has_more else None,
+            "has_more": has_more}
+
 
 @router.get("/encounters/{encounter_id}")
 def get_encounter(encounter_id: int, db: DB, user: User):
