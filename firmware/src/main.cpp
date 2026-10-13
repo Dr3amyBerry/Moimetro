@@ -45,10 +45,6 @@ bool maxReady = false;
 bool fingerPresent = false;
 float ambientC = NAN, humidity = NAN, bodyC = NAN, bpm = NAN;
 portMUX_TYPE opticalMux = portMUX_INITIALIZER_UNLOCKED;
-moi::OpticalQuality opticalQuality = moi::OpticalQuality::Collecting;
-float opticalRatio = NAN;
-float benchSpo2 = NAN;
-bool benchEstimateAvailable = false;
 
 // Coefficients are NOT shipped: must come from calibration of THIS hardware.
 // An optional LAB-only curve is configured in the untracked secrets.h file.
@@ -69,7 +65,9 @@ bool dsWaiting = false;
 String captureId;
 
 void resetPulse() {
+  portENTER_CRITICAL(&opticalMux);
   bpm = NAN;
+  portEXIT_CRITICAL(&opticalMux);
   lastBeat = 0;
   beatCount = 0;
   beatPosition = 0;
@@ -82,6 +80,7 @@ void resetPulse() {
 void opticalTask(void *arg) {
   (void)arg;
   unsigned long lastService = millis();
+  unsigned long lastSample = lastService;
   uint32_t lastDiagnostic = 0;
   for (;;) {
     const unsigned long t = millis();
@@ -93,7 +92,17 @@ void opticalTask(void *arg) {
     }
     lastService = t;
     maxSensor.check();
+    if (!maxSensor.available() && millis() - lastSample > 200) {
+      // No Red/IR pairs: never keep the last valid optical reading.
+      oxygenEstimator.reset(moi::OpticalQuality::Collecting);
+      resetPulse();
+      portENTER_CRITICAL(&opticalMux);
+      fingerPresent = false;
+      portEXIT_CRITICAL(&opticalMux);
+      lastSample = millis();
+    }
     while (maxSensor.available()) {
+      lastSample = millis();
       const uint32_t red = maxSensor.getFIFORed();
       const uint32_t ir = maxSensor.getFIFOIR();
       maxSensor.nextSample();
@@ -101,10 +110,14 @@ void opticalTask(void *arg) {
       const bool fresh = oxygenEstimator.add(red, ir);
       if (ir < FINGER_IR_MIN || red < 10000 || ir >= moi::Spo2Estimator::kAdcSaturation
           || red >= moi::Spo2Estimator::kAdcSaturation) {
+        portENTER_CRITICAL(&opticalMux);
         fingerPresent = false;
+        portEXIT_CRITICAL(&opticalMux);
         resetPulse();
       } else {
+        portENTER_CRITICAL(&opticalMux);
         fingerPresent = true;
+        portEXIT_CRITICAL(&opticalMux);
         const uint32_t instant = millis();
         if (lastBeat != 0 && instant - lastBeat > 4000) resetPulse();
         if (checkForBeat(ir)) {
@@ -117,20 +130,15 @@ void opticalTask(void *arg) {
               if (beatCount < RATE_SIZE) ++beatCount;
               uint16_t sum = 0;
               for (byte i = 0; i < beatCount; ++i) sum += beatRates[i];
+              portENTER_CRITICAL(&opticalMux);
               bpm = static_cast<float>(sum) / beatCount;
+              portEXIT_CRITICAL(&opticalMux);
             }
           }
           lastBeat = instant;
         }
       }
       const moi::OpticalResult &state = oxygenEstimator.result();
-      portENTER_CRITICAL(&opticalMux);
-      opticalQuality = state.quality;
-      opticalRatio = state.hasRatio ? state.ratio : NAN;
-      benchSpo2 = state.hasExperimentalSpO2 ? state.experimentalSpO2 : NAN;
-      benchEstimateAvailable = state.hasExperimentalSpO2;
-      portEXIT_CRITICAL(&opticalMux);
-
       // Optical diagnostics: never equivalent to a validated oximeter.
       if (fresh && millis() - lastDiagnostic >= 1000) {
         lastDiagnostic = millis();
