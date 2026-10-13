@@ -30,6 +30,7 @@ const state = { token: null, role: "", username: "", patient: null,
 // List state stays bounded regardless of the number of records in SQLite.
 const directory = { cursor: null, previous: [], page: 1, next: null, request: 0 };
 const visits = { cursor: null, previous: [], page: 1, next: null, request: 0 };
+const staffPaging = { cursor: null, previous: [], page: 1, next: null, request: 0 };
 let selectedPatientVersion = 0;
 const DIRECTORY_LIMIT = 25;
 const VISIT_LIMIT = 15;
@@ -127,6 +128,7 @@ function showScreen(area) {
 function showLogin() {
   ++directory.request;
   ++visits.request;
+  ++staffPaging.request;
   ++selectedPatientVersion;
   el("loginScreen").hidden = false;
   el("workScreen").hidden = true;
@@ -228,6 +230,51 @@ async function loadPatients() {
   el("directoryPageLabel").textContent = "Página " + directory.page;
   el("directoryPrev").disabled = directory.previous.length === 0;
   el("directoryNext").disabled = !directory.next;
+}
+
+function resetStaffPages() {
+  staffPaging.cursor = null;
+  staffPaging.previous = [];
+  staffPaging.page = 1;
+  staffPaging.next = null;
+}
+
+async function loadStaff() {
+  if (state.role !== "admin") return;
+  const request = ++staffPaging.request;
+  const q = el("staffSearch").value.trim();
+  const query = new URLSearchParams({ limit: "20" });
+  if (q) query.set("q", q);
+  if (staffPaging.cursor) query.set("before", String(staffPaging.cursor));
+  el("staffStatus").textContent = "Cargando personal…";
+  const result = await api("/api/admin/users?" + query.toString());
+  if (request !== staffPaging.request || !state.token) return;
+  staffPaging.next = result.next_cursor;
+  const tbody = el("staffList");
+  clearChildren(tbody);
+  const roles = { admin: "Administración", reception: "Recepción",
+                  nurse: "Enfermería", clinician: "Medicina" };
+  for (const person of result.items) {
+    const tr = document.createElement("tr");
+    addCell(tr, person.username);
+    addCell(tr, roles[person.role] || person.role);
+    addCell(tr, person.active ? "Activo" : "Desactivado");
+    addCell(tr, dateText(person.created_at));
+    tbody.appendChild(tr);
+  }
+  if (!result.items.length) {
+    const tr = document.createElement("tr");
+    const td = addCell(tr, "No hay usuarios en esta página.");
+    td.colSpan = 4;
+    td.className = "empty-table-cell";
+    tbody.appendChild(tr);
+  }
+  const count = result.items.length;
+  el("staffStatus").textContent =
+    count + (count === 1 ? " usuario" : " usuarios") + " en esta página";
+  el("staffPageLabel").textContent = "Página " + staffPaging.page;
+  el("staffPrev").disabled = staffPaging.previous.length === 0;
+  el("staffNext").disabled = !staffPaging.next;
 }
 
 async function selectPatient(id) {
@@ -429,9 +476,39 @@ el("navPatients").addEventListener("click", safe(async () => {
   showScreen("directory");
   await loadPatients();
 }));
-el("navStaff").addEventListener("click", () => {
-  if (state.role === "admin") showScreen("staff");
+el("navStaff").addEventListener("click", safe(async () => {
+  if (state.role !== "admin") return;
+  showScreen("staff");
+  await loadStaff();
+}));
+el("newStaffButton").addEventListener("click", () => {
+  el("staffCreatePanel").hidden = !el("staffCreatePanel").hidden;
 });
+el("cancelStaffButton").addEventListener("click", () => {
+  el("staffCreatePanel").hidden = true;
+  el("staffForm").reset();
+});
+let staffSearchTimer = null;
+el("staffSearch").addEventListener("input", () => {
+  clearTimeout(staffSearchTimer);
+  staffSearchTimer = setTimeout(() => {
+    resetStaffPages();
+    loadStaff().catch(error => toast(error.message, true));
+  }, 350);
+});
+el("staffNext").addEventListener("click", safe(async () => {
+  if (!staffPaging.next) return;
+  staffPaging.previous.push(staffPaging.cursor);
+  staffPaging.cursor = staffPaging.next;
+  staffPaging.page++;
+  await loadStaff();
+}));
+el("staffPrev").addEventListener("click", safe(async () => {
+  if (!staffPaging.previous.length) return;
+  staffPaging.cursor = staffPaging.previous.pop();
+  staffPaging.page--;
+  await loadStaff();
+}));
 el("newPatientButton").addEventListener("click", () => showScreen("registration"));
 el("cancelPatientButton").addEventListener("click", safe(async () => {
   showScreen("directory");
@@ -523,6 +600,9 @@ el("historyForm").addEventListener("submit", safe(async e => {
 el("staffForm").addEventListener("submit", safe(async e => {
   await api("/api/admin/users", { method: "POST", body: JSON.stringify(formValue(e.target)) });
   e.target.reset();
+  el("staffCreatePanel").hidden = true;
+  resetStaffPages();
+  await loadStaff();
   toast("Cuenta de personal creada.");
 }));
 el("encounterForm").addEventListener("submit", safe(async e => {
