@@ -4,7 +4,7 @@
 
 ## 1. Componentes
 
-\`\`\`text
+```text
              ESP32 (datos de sensores)
          ┌──────────────────────────────┐
          │ DHT11 (ambiente) GPIO18      │
@@ -30,7 +30,7 @@
                         ▲
          Navegador PC (usuario con roles)
          HTML / CSS / JavaScript local
-\`\`\`
+```
 
 Sin servidor en la nube, servicios de Google ni dependencias de Internet en operación. Las dependencias Python/Arduino se descargan durante la preparación, no durante el uso. El dispositivo debe estar en la **misma red de pruebas** que el PC.
 
@@ -53,16 +53,16 @@ Las políticas definitivas del consultorio requieren aprobación del responsable
 ## 3. Protocolo de captura
 
 1. Un operador autorizado abre un expediente y una consulta.
-2. Pulsa **Iniciar captura**; se crea \`capture_sessions.id\` asociado a \`encounter_id\` y \`device_id\`.
-3. ESP32 consulta cada ~5 segundos \`GET /api/device/active-session\` con \`X-Device-Key\`. La respuesta **no incluye nombre ni cédula del paciente**.
-4. ESP32 envía cada ~3 segundos \`POST /api/device/measurements\` con sesión y muestras.
-5. El servidor valida sesión, dispositivo, tipo, estado y coherencia física. Las muestras válidas entran \`pending\`; las inválidas entran \`rejected\`. SpO₂ recibido del ESP32 se rechaza.
+2. Pulsa **Iniciar captura**; se crea `capture_sessions.id` asociado a `encounter_id` y `device_id`.
+3. ESP32 consulta cada ~5 segundos `GET /api/device/active-session` con `X-Device-Key`. La respuesta **no incluye nombre ni cédula del paciente**.
+4. ESP32 envía cada ~3 segundos `POST /api/device/measurements` con sesión y muestras.
+5. El servidor valida sesión, dispositivo, tipo, estado y coherencia física. Las muestras válidas entran `pending`; las inválidas entran `rejected`. SpO₂ recibido del ESP32 se rechaza.
 6. Enfermería/médico acepta o rechaza explícitamente las lecturas; su acción queda auditada.
 7. Se detiene la sesión. El médico registra evaluación, diagnóstico y tratamiento y cierra la consulta.
 
 Ejemplo de **telemetría de laboratorio** (solo valores ficticios):
 
-\`\`\`json
+```json
 {
   "session_id": "TOKEN_DE_SESION_GENERADO_POR_LA_API",
   "device_id": "esp32-01",
@@ -73,21 +73,21 @@ Ejemplo de **telemetría de laboratorio** (solo valores ficticios):
     {"kind": "humidity_pct", "quality": "ok", "value": 56}
   ]
 }
-\`\`\`
+```
 
-Campos básicos de \`measurements\`: \`encounter_id\`, \`capture_session_id\`, \`device_id\`, \`kind\`, \`value\`, \`unit\`, \`quality\`, \`origin\`, \`status\`, \`received_at\`, \`accepted_at\`, \`accepted_by\` y notas.
+Campos básicos de `measurements`: `encounter_id`, `capture_session_id`, `device_id`, `kind`, `value`, `unit`, `quality`, `origin`, `status`, `received_at`, `accepted_at`, `accepted_by` y notas.
 
-**Definición de calidad:** \`ok\` / \`no_contact\` / \`unavailable\` / \`error\` / \`stale\`. Los controles de rango del backend solo descartan corrupción manifiesta de datos; **NO** definen valores saludables o niveles de triaje.
+**Definición de calidad:** `ok` / `no_contact` / `unavailable` / `error` / `stale`. Los controles de rango del backend solo descartan corrupción manifiesta de datos; **NO** definen valores saludables o niveles de triaje.
 
 ## 4. Modelo de datos
 
-- \`users\`: cuentas y roles, hash de contraseña; \`tokens\`: SHA-256 de tokens efímeros con expiración.
-- \`patients\`: cédula (tipo, número), nombre, fecha de nacimiento y contacto. Índice único en documento.
-- \`patient_histories\`: alergias, antecedentes y responsable/fecha de modificación.
-- \`encounters\`: visitas \`open/closed\`, evaluación, diagnóstico y tratamiento; asociadas por ID interno del paciente.
-- \`capture_sessions\`: máximo una sesión activa por dispositivo.
-- \`measurements\`: lecturas por consulta, originadas en dispositivo o ingresadas manualmente, con estado.
-- \`audit_events\`: actividad de usuario por recurso sin copiar notas clínicas al log.
+- `users`: cuentas y roles, hash de contraseña; `tokens`: SHA-256 de tokens efímeros con expiración.
+- `patients`: cédula (tipo, número), nombre, fecha de nacimiento y contacto. Índice único en documento.
+- `patient_histories`: alergias, antecedentes y responsable/fecha de modificación.
+- `encounters`: visitas `open/closed`, evaluación, diagnóstico y tratamiento; asociadas por ID interno del paciente.
+- `capture_sessions`: máximo una sesión activa por dispositivo.
+- `measurements`: lecturas por consulta, originadas en dispositivo o ingresadas manualmente, con estado.
+- `audit_events`: actividad de usuario por recurso sin copiar notas clínicas al log.
 
 Las cédulas sirven para buscar, **no** como clave primaria. No usar registros reales en las pruebas.
 
