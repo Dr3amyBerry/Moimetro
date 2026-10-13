@@ -7,7 +7,7 @@ import sqlite3
 from typing import List, Literal, Optional
 from typing_extensions import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.api.records import encounter_or_404
@@ -126,11 +126,18 @@ def ingest_device(payload: DeviceBatch, db: DB, device_id: Device):
     return {"recorded": len(payload.samples), "status": "pending_review"}
 
 @router.get("/measurements")
-def readings(encounter_id: int, db: DB, user: User):
+def readings(encounter_id: int, db: DB, user: User,
+             limit: int = Query(default=200, ge=1, le=200),
+             before: Optional[int] = Query(default=None, ge=1)):
+    """Bounded seek pagination. Existing callers keep the 200-row default."""
     encounter_or_404(db, encounter_id)
-    result = rows(db.execute(
-        "SELECT * FROM measurements WHERE encounter_id=? ORDER BY id DESC LIMIT 200",
-        (encounter_id,)))
+    query = "SELECT * FROM measurements WHERE encounter_id=?"
+    args = [encounter_id]
+    if before is not None:
+        query += " AND id<?"
+        args.append(before)
+    result = rows(db.execute(query + " ORDER BY id DESC LIMIT ?",
+                             (*args, limit)))
     audit(db, user["id"], "list", "measurements", encounter_id)
     db.commit()
     return result
