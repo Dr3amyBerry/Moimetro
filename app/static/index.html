@@ -156,6 +156,24 @@
           </div>
           <button id="newStaffButton" class="button button-primary" type="button">+ Nuevo usuario</button>
         </header>
+        <section id="staffCreatePanel" class="panel form-page-panel extra-form" hidden>
+          <div class="panel-heading"><h2>Nuevo usuario</h2>
+            <button id="cancelStaffButton" class="button button-quiet" type="button">Cancelar</button>
+          </div>
+          <form id="staffForm" class="form-stack">
+          <label>Usuario<input name="username" pattern="[a-zA-Z0-9_]+" minlength="3" required></label>
+          <label>Contraseña inicial<input name="password" type="password" minlength="12" autocomplete="new-password" required></label>
+          <label>Rol
+            <select name="role">
+              <option value="reception">Recepción</option>
+              <option value="nurse">Enfermería</option>
+              <option value="clinician">Médico</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </label>
+          <button type="submit" class="button button-sidebar">Crear usuario</button>
+        </form>
+        </section>
         <section class="panel directory-panel">
           <div class="directory-toolbar">
             <div class="directory-toolbar-title"><h2>Usuarios registrados</h2>
@@ -180,24 +198,7 @@
             </div>
           </div>
         </section>
-        <section id="staffCreatePanel" class="panel form-page-panel extra-form" hidden>
-          <div class="panel-heading"><h2>Nuevo usuario</h2>
-            <button id="cancelStaffButton" class="button button-quiet" type="button">Cancelar</button>
-          </div>
-          <form id="staffForm" class="form-stack">
-          <label>Usuario<input name="username" pattern="[a-zA-Z0-9_]+" minlength="3" required></label>
-          <label>Contraseña inicial<input name="password" type="password" minlength="12" autocomplete="new-password" required></label>
-          <label>Rol
-            <select name="role">
-              <option value="reception">Recepción</option>
-              <option value="nurse">Enfermería</option>
-              <option value="clinician">Médico</option>
-              <option value="admin">Administrador</option>
-            </select>
-          </label>
-          <button type="submit" class="button button-sidebar">Crear usuario</button>
-        </form>
-        </section>
+
       </section>
 
       <section id="patientScreen" class="area-screen" hidden>
