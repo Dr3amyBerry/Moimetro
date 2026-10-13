@@ -398,3 +398,157 @@ def test_staff_directory_is_bounded_private_and_admin_only(client):
     assert account.status_code == 201
     reception = login(client, "frontdesk", "synthetic-reception-password123")
     assert client.get("/api/admin/users", headers=reception).status_code == 403
+
+
+def test_staff_security_roles_disable_password_reset_and_session_revocation(client):
+    admin = login(client)
+    created = client.post("/api/admin/users", headers=admin, json={
+        "username": "secure_staff", "password": "original-temporary-password",
+        "role": "reception",
+    })
+    assert created.status_code == 201
+    uid = created.json()["id"]
+    old = login(client, "secure_staff", "original-temporary-password")
+    assert client.get("/api/auth/me", headers=old).status_code == 200
+    assert client.patch("/api/admin/users/{}".format(uid), headers=old, json={
+        "role": "admin"
+    }).status_code == 403
+
+    promoted = client.patch("/api/admin/users/{}".format(uid), headers=admin, json={
+        "role": "clinician"
+    })
+    assert promoted.status_code == 200, promoted.text
+    assert promoted.json()["sessions_revoked"] is True
+    assert client.get("/api/auth/me", headers=old).status_code == 401
+    current = login(client, "secure_staff", "original-temporary-password")
+    assert client.get("/api/auth/me", headers=current).json()["role"] == "clinician"
+
+    blocked = client.patch("/api/admin/users/{}".format(uid), headers=admin, json={
+        "active": False
+    })
+    assert blocked.status_code == 200
+    assert client.get("/api/auth/me", headers=current).status_code == 401
+    assert client.post("/api/auth/login", json={
+        "username": "secure_staff", "password": "original-temporary-password"
+    }).status_code == 401
+
+    restored = client.patch("/api/admin/users/{}".format(uid), headers=admin, json={
+        "active": True, "password": "new-temporary-password-test123"
+    })
+    assert restored.status_code == 200
+    assert client.post("/api/auth/login", json={
+        "username": "secure_staff", "password": "original-temporary-password"
+    }).status_code == 401
+    reopened = login(client, "secure_staff", "new-temporary-password-test123")
+    assert client.get("/api/auth/me", headers=reopened).json()["role"] == "clinician"
+    assert client.patch("/api/admin/users/999999", headers=admin, json={
+        "active": False
+    }).status_code == 404
+
+    from app.storage import connect
+    with connect() as db:
+        own_id = db.execute("SELECT id FROM users WHERE username='admin'").fetchone()[0]
+    assert client.patch("/api/admin/users/{}".format(own_id), headers=admin, json={
+        "active": False
+    }).status_code == 409
+    assert client.patch("/api/admin/users/{}".format(own_id), headers=admin, json={
+        "role": "reception"
+    }).status_code == 409
+    assert client.patch("/api/admin/users/{}".format(own_id), headers=admin, json={
+        "password": "unsafe-self-admin-reset123"
+    }).status_code == 409
+    assert client.get("/api/auth/me", headers=admin).status_code == 200
+
+
+def test_change_own_password_requires_old_and_revokes_every_token(client):
+    first = login(client)
+    other = login(client)
+    endpoint = "/api/auth/change-password"
+    assert client.post(endpoint, headers=first, json={
+        "current_password": "wrong-password",
+        "new_password": "a-new-password-for-tests-123"
+    }).status_code == 403
+    assert client.get("/api/auth/me", headers=first).status_code == 200
+    assert client.post(endpoint, headers=first, json={
+        "current_password": "password-for-test-admin-123",
+        "new_password": "password-for-test-admin-123"
+    }).status_code == 422
+    changed = client.post(endpoint, headers=first, json={
+        "current_password": "password-for-test-admin-123",
+        "new_password": "a-new-password-for-tests-123"
+    })
+    assert changed.status_code == 200
+    assert changed.json()["sessions_revoked"] is True
+    assert client.get("/api/auth/me", headers=first).status_code == 401
+    assert client.get("/api/auth/me", headers=other).status_code == 401
+    assert client.post("/api/auth/login", json={
+        "username": "admin", "password": "password-for-test-admin-123"
+    }).status_code == 401
+    assert client.get("/api/auth/me", headers=login(
+        client, "admin", "a-new-password-for-tests-123"
+    )).status_code == 200
+
+
+def test_clinical_revisions_atomic_and_privileged(client):
+    import sqlite3
+    from app.storage import connect
+    admin = login(client)
+    pid = patient(client, admin)
+    eid = visit(client, admin, pid)
+    updated = client.patch("/api/patients/{}".format(pid), headers=admin, json={
+        "full_name": "Paciente Actualizado",
+        "birth_date": "2000-01-15", "phone": "000-TEST-000",
+        "reason": "Corrección en registro ficticio"
+    })
+    assert updated.status_code == 200
+    assert updated.json()["changed"] is True
+    assert client.put("/api/patients/{}/history".format(pid), headers=admin, json={
+        "allergies": "Alergia ficticia", "background": "Ejemplo simulado",
+        "reason": "Actualización de antecedentes falsos"
+    }).status_code == 200
+    assert client.patch("/api/encounters/{}".format(eid), headers=admin, json={
+        "assessment": "Evaluación ficticia", "diagnosis": "",
+        "treatment": "", "reason": "Corrección de evaluación de prueba"
+    }).status_code == 200
+    same = client.patch("/api/encounters/{}".format(eid), headers=admin, json={
+        "assessment": "Evaluación ficticia", "diagnosis": "",
+        "treatment": "", "reason": "Repetir lo mismo"
+    })
+    assert same.status_code == 200 and same.json()["changed"] is False
+    assert client.post("/api/encounters/{}/close".format(eid), headers=admin).status_code == 200
+    revisions = client.get("/api/patients/{}/revisions".format(pid), headers=admin)
+    assert revisions.status_code == 200
+    items = revisions.json()["items"]
+    assert len(items) == 6, items
+    assert all("before_json" not in entry and "after_json" not in entry
+               for entry in items)
+    patient_edit = next(x for x in items if x["reason"] == "Corrección en registro ficticio")
+    assert "full_name" in patient_edit["fields"]
+    assert "phone" in patient_edit["fields"]
+    detail = client.get("/api/patients/{}/revisions/{}".format(
+        pid, patient_edit["id"]
+    ), headers=admin)
+    assert detail.status_code == 200
+    assert detail.json()["before"]["full_name"] == "Paciente de Prueba"
+    assert detail.json()["after"]["full_name"] == "Paciente Actualizado"
+    assert client.get("/api/patients/999999/revisions/{}".format(
+        patient_edit["id"]
+    ), headers=admin).status_code == 404
+
+    create = client.post("/api/admin/users", headers=admin, json={
+        "username": "read_only", "password": "password-for-test-reception-123",
+        "role": "reception"
+    })
+    assert create.status_code == 201
+    reception = login(client, "read_only", "password-for-test-reception-123")
+    assert client.get("/api/patients/{}/revisions".format(
+        pid), headers=reception).status_code == 403
+    assert client.get("/api/patients/{}/revisions/{}".format(
+        pid, patient_edit["id"]), headers=reception).status_code == 403
+
+    with connect() as db:
+        with pytest.raises(sqlite3.IntegrityError, match="append-only"):
+            db.execute("DELETE FROM record_revisions WHERE id=?", (patient_edit["id"],))
+        with pytest.raises(sqlite3.IntegrityError, match="append-only"):
+            db.execute("UPDATE record_revisions SET reason='alterada' WHERE id=?",
+                       (patient_edit["id"],))
