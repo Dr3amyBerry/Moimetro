@@ -2,27 +2,30 @@
 
 > **Prototipo para capacitación técnica con datos ficticios.** Sin validación clínica. No debe usarse para decidir urgencias, diagnósticos ni tratamientos.
 
-## Inicio del sistema
+## Inicio del sistema (Windows)
 
-1. Instalar Python 3.11+ y las dependencias indicadas en [README](../README.md).
-2. Crear el primer administrador con `python -m app.manage create-admin --username admin` (solo primera vez).
-3. Abrir el servidor con `python -m uvicorn app.main:app --host 127.0.0.1 --port 8000`.
-4. Abrir `http://127.0.0.1:8000` en el navegador de la computadora donde se ejecuta la aplicación.
-5. Iniciar sesión. La cuenta administradora puede crear otras cuentas desde el panel de administración.
+1. Descargar el instalador para el equipo desde [Instaladores Windows](https://github.com/Dr3amyBerry/Moimetro/actions/workflows/windows-installer.yml).
+2. Ejecutar el instalador .exe con doble clic. No necesita instalar Python.
+3. Abrir Moímetro desde Inicio o el acceso directo del escritorio.
+4. En el primer inicio, crear la cuenta de administrador con el asistente.
+5. Iniciar sesión. El programa abre la interfaz en el navegador local.
 
-La aplicación funciona localmente sin Internet después de instalar sus dependencias. Los navegadores de otras computadoras solo deben conectarse cuando haya una arquitectura LAN segura aprobada.
+También existe ejecución de desarrollo con Python/Uvicorn descrita en el [README](../README.md). El programa funciona sin Internet una vez instalado. Windows 7 SP1 y componentes sin soporte son solo para demostraciones ficticias; no usar pacientes reales. La conexión LAN del ESP32 aún requiere transporte seguro.
 
-## Recepción: identificar y registrar
+## Directorio de pacientes y recepción
 
-- En **Pacientes**, buscar por cédula o nombre.
-- Si existe, abrir la ficha haciendo clic en el resultado.
-- Si es una persona nueva, completar tipo de documento, número, nombre, fecha de nacimiento y teléfono. El sistema rechaza un documento duplicado.
-- Verificar la identidad antes de editar los datos. La cédula no se modifica desde la interfaz de edición; su corrección requiere un procedimiento administrativo específico aún pendiente.
-- En **Datos personales**, modificar nombre, fecha o teléfono y guardar.
+- Al iniciar sesión se abre **Pacientes**, con tabla del registro más reciente al más antiguo.
+- Buscar por nombre, apellido, cédula o filtrar el tipo de documento (V/E/P/OTRO). La búsqueda utiliza un índice de texto local.
+- Usar **Siguiente** y **Anterior** para navegar por páginas de 25. No se cargan todos los expedientes a la vez.
+- Pulsar **Abrir** para consultar una ficha y **Volver al directorio** para regresar.
+- **Registrar paciente** abre una pantalla aparte. Se impiden documentos duplicados.
+- Las pestañas del expediente son **Consultas**, **Datos del paciente** y **Consulta activa**.
+- En **Datos del paciente**, modificar nombre, fecha o teléfono. La cédula no puede editarse desde la ficha; verificar identidad primero.
+- El administrador dispone de la sección **Personal** para consultar usuarios paginados y crear cuentas.
 
 ## Antecedentes y alergias
 
-- La sección **Antecedentes y alergias** se muestra dentro del expediente.
+- La sección **Antecedentes y alergias** se muestra en la pestaña **Datos del paciente** del expediente.
 - Solo un médico o administrador puede **guardar** antecedentes en esta versión; otros roles tienen acceso de lectura.
 - No asumir que un campo vacío significa ausencia de alergias. Registrar solo información comprobada y autorizada.
 
@@ -39,7 +42,7 @@ Las consultas anteriores se muestran en **Historial**, con fecha y estado.
 
 ## Medición con ESP32
 
-- La persona con rol enfermería, médico o admin inicia una sesión desde **Captura de sensores**.
+- La persona con rol enfermería, médico o admin inicia una sesión desde **Consulta activa → Mediciones**.
 - El ESP32 autorizado consulta automáticamente qué sesión está activa (sin recibir la cédula ni el nombre del paciente).
 - El dispositivo envía valores y estados de calidad. Los valores admisibles llegan como **Pendientes** y necesitan revisión humana.
 - El operador comprueba identidad, colocación, coherencia y calidad, y pulsa **Aceptar** o **Rechazar** para cada lectura.
@@ -79,7 +82,7 @@ python -m app.manage verify-backup --input ruta/segura/copia.sqlite3
 
 | Situación | Qué revisar |
 |---|---|
-| La pantalla no abre | Que Uvicorn esté en ejecución; URL y puerto correctos. |
+| La pantalla no abre | En el EXE, verificar el iniciador y el navegador; en desarrollo, Uvicorn y el puerto. |
 | No deja entrar | Usuario, contraseña y estado de cuenta; si hay muchos intentos, esperar cinco minutos. |
 | ESP32 no aparece | SSID, IP de servidor, red local y coincidencia de las claves de dispositivo. |
 | No hay mediciones | Sesión iniciada, sensor conectado, dedo colocado y firmware en ejecución. |
