@@ -4,7 +4,7 @@
 
 ## Instalación para el usuario
 
-1. Descargar el archivo `Moimetro-Setup-....exe` desde [GitHub Actions: Instaladores Windows](https://github.com/Dr3amyBerry/Moimetro/actions/workflows/windows-installer.yml) y extraerlo del ZIP del artefacto. Los instaladores etiquetados se podrán encontrar en [Releases](https://github.com/Dr3amyBerry/Moimetro/releases).
+1. Entrar a [**Releases → Moímetro v0.3.0 beta**](https://github.com/Dr3amyBerry/Moimetro/releases/tag/v0.3.0-beta.1) y descargar el instalador `.exe` correspondiente desde la sección **Assets**. No hace falta extraer ZIP.
 2. Ejecutar el instalador con doble clic y continuar con el asistente en español. **No necesita instalar Python ni ejecutar comandos**.
 3. Opcionalmente crear acceso directo en Escritorio. El instalador también añade el acceso en el menú Inicio.
 4. Al abrir Moímetro, aparece el navegador de la computadora y, en el primer inicio, se solicita crear usuario administrador y contraseña (mínimo 12 caracteres).
