@@ -71,6 +71,9 @@ CREATE TABLE IF NOT EXISTS measurements (
  notes TEXT NOT NULL DEFAULT '', received_at TEXT NOT NULL,
  accepted_at TEXT, accepted_by INTEGER REFERENCES users(id)
 );
+CREATE INDEX IF NOT EXISTS idx_patients_name_prefix ON patients(full_name COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_patients_document_prefix ON patients(document_number COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_encounters_patient_paging ON encounters(patient_id,id DESC);
 CREATE INDEX IF NOT EXISTS idx_encounters_patient ON encounters(patient_id,opened_at);
 CREATE INDEX IF NOT EXISTS idx_measurements_encounter ON measurements(encounter_id,received_at);
 CREATE TABLE IF NOT EXISTS audit_events (
