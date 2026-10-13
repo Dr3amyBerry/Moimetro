@@ -215,3 +215,103 @@ def test_windows_launcher_uses_per_user_persistent_storage(tmp_path, monkeypatch
     assert db_path().parent == folder / "data"
     assert db_path().parent.is_dir()
     assert "Moimetro" in str(db_path())
+
+
+def test_large_directory_seek_pagination_and_filters(client):
+    """Every API response remains bounded; no full patient table in the browser."""
+    headers = login(client)
+    from app.storage import connect, now
+    with connect() as db:
+        db.executemany(
+            """INSERT INTO patients(document_type,document_number,full_name,created_at)
+               VALUES(?,?,?,?)""",
+            [("V" if n % 2 == 0 else "E",
+              "99{:05d}".format(n),
+              "Paciente sintético {:05d}".format(n), now())
+             for n in range(213)]
+        )
+    assert client.get("/api/patients/directory").status_code == 401
+    seen = []
+    before = None
+    for _ in range(10):
+        params = {"limit": 25}
+        if before:
+            params["before"] = before
+        response = client.get("/api/patients/directory", headers=headers, params=params)
+        assert response.status_code == 200, response.text
+        page = response.json()
+        assert len(page["items"]) <= 25
+        seen.extend(patient["id"] for patient in page["items"])
+        assert seen == sorted(seen, reverse=True)
+        before = page["next_cursor"]
+        if before is None:
+            break
+    assert len(seen) == 213 and len(set(seen)) == 213
+    assert before is None
+
+    filtered = client.get("/api/patients/directory", headers=headers, params={
+        "document_type": "E", "q": "9900", "limit": 50
+    })
+    assert filtered.status_code == 200
+    assert all(item["document_type"] == "E" and
+               item["document_number"].startswith("9900")
+               for item in filtered.json()["items"])
+    assert client.get("/api/patients/directory", headers=headers,
+                      params={"limit": 100}).status_code == 422
+    assert client.get("/api/patients/directory", headers=headers,
+                      params={"before": -1}).status_code == 422
+    assert client.get("/api/patients/directory", headers=headers,
+                      params={"document_type": "invalid"}).status_code == 422
+
+    # Search characters are literal, not uncontrolled SQL LIKE wildcards.
+    for term in ("%", "_", "\\"):
+        result = client.get("/api/patients/directory", headers=headers,
+                            params={"q": term})
+        assert result.status_code == 200
+        assert result.json()["items"] == []
+
+
+def test_long_patient_history_is_paginated_and_scoped(client):
+    headers = login(client)
+    from app.storage import connect, now
+    with connect() as db:
+        db.executemany(
+            """INSERT INTO patients(document_type,document_number,full_name,created_at)
+               VALUES(?,?,?,?)""",
+            [("V", "88{:05d}".format(i), "Paciente simulado {}".format(i), now())
+             for i in range(2)]
+        )
+        patients = [r[0] for r in db.execute("SELECT id FROM patients ORDER BY id")]
+        user_id = db.execute("SELECT id FROM users LIMIT 1").fetchone()[0]
+        db.executemany(
+            """INSERT INTO encounters(patient_id,created_by,reason,opened_at)
+               VALUES(?,?,?,?)""",
+            [(patients[0], user_id, "Consulta sintética", now()) for _ in range(63)]
+            + [(patients[1], user_id, "Otra historia", now()) for _ in range(3)]
+        )
+        indices = {
+            index[1] for index in db.execute("PRAGMA index_list('patients')")
+        }
+        assert "idx_patients_name_prefix" in indices
+        assert "idx_patients_document_prefix" in indices
+
+    seen = []
+    before = None
+    for _ in range(5):
+        params = {"patient_id": patients[0], "limit": 15}
+        if before is not None:
+            params["before"] = before
+        response = client.get("/api/encounters/directory", headers=headers, params=params)
+        assert response.status_code == 200
+        page = response.json()
+        assert len(page["items"]) <= 15
+        assert all(visit["patient_id"] == patients[0] for visit in page["items"])
+        seen.extend(visit["id"] for visit in page["items"])
+        before = page["next_cursor"]
+        if before is None:
+            break
+    assert len(seen) == 63 and len(set(seen)) == 63
+    assert client.get("/api/encounters/directory", headers=headers,
+                      params={"patient_id": patients[0], "limit": 999}).status_code == 422
+    assert client.get("/api/encounters/directory",
+                      params={"patient_id": patients[0]}).status_code == 401
