@@ -152,3 +152,7 @@ Consulte [Manual de usuario (borrador)](docs/MANUAL_USUARIO.md), [Arquitectura](
 ## Próximos bloqueos antes del piloto
 
 Requieren trabajo explícito: medición real/calibrada de SpO₂ y temperatura, pruebas con hardware y tiempos de captura, seguridad de red/TLS, restauración verificada de backups, migraciones de base de datos, consentimiento y tratamiento legal de los datos clínicos, protocolo de triaje revisado por profesionales, y manuales definitivos. Ver tareas y dependencias en [PLAN_MAESTRO.md](PLAN_MAESTRO.md).
+
+## SpO₂ experimental
+
+El ESP32 calcula la relación PPG rojo/infrarrojo real, pero **NO registra porcentajes SpO₂ hasta validar una curva de calibración específica del hardware**. Consulte [algoritmo y validación](docs/SPO2_CALIBRACION.md).
