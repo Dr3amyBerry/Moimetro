@@ -31,6 +31,8 @@ const state = { token: null, role: "", username: "", patient: null,
 const directory = { cursor: null, previous: [], page: 1, next: null, request: 0 };
 const visits = { cursor: null, previous: [], page: 1, next: null, request: 0 };
 const staffPaging = { cursor: null, previous: [], page: 1, next: null, request: 0 };
+const revisionPaging = { cursor: null, previous: [], page: 1, next: null, request: 0 };
+let managedStaff = null;
 let selectedPatientVersion = 0;
 const DIRECTORY_LIMIT = 25;
 const VISIT_LIMIT = 15;
@@ -129,6 +131,12 @@ function showLogin() {
   ++directory.request;
   ++visits.request;
   ++staffPaging.request;
+  ++revisionPaging.request;
+  managedStaff = null;
+  el("accountPanel").hidden = true;
+  el("staffManagePanel").hidden = true;
+  el("passwordForm").reset();
+  el("changePasswordButton").hidden = true;
   ++selectedPatientVersion;
   el("loginScreen").hidden = false;
   el("workScreen").hidden = true;
@@ -146,6 +154,7 @@ function showWork() {
   el("loginScreen").hidden = true;
   el("workScreen").hidden = false;
   el("logoutButton").hidden = false;
+  el("changePasswordButton").hidden = false;
   el("navStaff").hidden = state.role !== "admin";
   const roles = { admin: "Administración", reception: "Recepción",
                   nurse: "Enfermería", clinician: "Medicina" };
@@ -260,12 +269,33 @@ async function loadStaff() {
     addCell(tr, roles[person.role] || person.role);
     addCell(tr, person.active ? "Activo" : "Desactivado");
     addCell(tr, dateText(person.created_at));
+    const action = document.createElement("td");
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "button button-table";
+    open.textContent = "Administrar";
+    open.setAttribute("aria-label", "Administrar usuario " + person.username);
+    open.addEventListener("click", () => {
+      managedStaff = person;
+      el("staffManageTitle").textContent = "Administrar · " + person.username;
+      el("staffManageForm").elements.role.value = person.role;
+      el("staffManageForm").elements.active.value = String(Boolean(person.active));
+      el("staffManageForm").elements.password.value = "";
+      const self = person.username === state.username;
+      el("staffManageForm").elements.role.disabled = self;
+      el("staffManageForm").elements.active.disabled = self;
+      el("staffCreatePanel").hidden = true;
+      el("staffManagePanel").hidden = false;
+      el("staffManagePanel").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    action.appendChild(open);
+    tr.appendChild(action);
     tbody.appendChild(tr);
   }
   if (!result.items.length) {
     const tr = document.createElement("tr");
     const td = addCell(tr, "No hay usuarios en esta página.");
-    td.colSpan = 4;
+    td.colSpan = 5;
     td.className = "empty-table-cell";
     tbody.appendChild(tr);
   }
@@ -277,6 +307,47 @@ async function loadStaff() {
   el("staffNext").disabled = !staffPaging.next;
 }
 
+async function loadRevisions() {
+  if (!state.patient || !mayClinicallyEdit()) return;
+  const request = ++revisionPaging.request;
+  const patientId = state.patient.id;
+  const query = new URLSearchParams({ limit: "15" });
+  if (revisionPaging.cursor) query.set("before", String(revisionPaging.cursor));
+  const data = await api("/api/patients/" + patientId + "/revisions?" + query.toString());
+  if (request !== revisionPaging.request || patientId !== state.patient?.id || !state.token) return;
+  revisionPaging.next = data.next_cursor;
+  const list = el("revisionList");
+  clearChildren(list);
+  const labels = {
+    patient: "Datos personales", history: "Antecedentes", encounter: "Consulta"
+  };
+  if (!data.items.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "No se registran cambios en esta página.";
+    list.appendChild(empty);
+  }
+  for (const entry of data.items) {
+    const item = document.createElement("article");
+    item.className = "revision-item";
+    const title = document.createElement("strong");
+    title.textContent = (labels[entry.resource] || "Registro") +
+      (entry.encounter_id ? " #" + entry.encounter_id : "");
+    const detail = document.createElement("p");
+    detail.textContent = dateText(entry.created_at) + " · " + entry.actor +
+      " · " + entry.reason;
+    const fields = document.createElement("small");
+    fields.textContent = "Campos modificados: " + (entry.fields.join(", ") || "—");
+    item.appendChild(title);
+    item.appendChild(detail);
+    item.appendChild(fields);
+    list.appendChild(item);
+  }
+  el("revisionPageLabel").textContent = "Página " + revisionPaging.page;
+  el("revisionPrev").disabled = revisionPaging.previous.length === 0;
+  el("revisionNext").disabled = !revisionPaging.next;
+}
+
 async function selectPatient(id) {
   const version = ++selectedPatientVersion;
   const selected = await api("/api/patients/" + id);
@@ -286,6 +357,12 @@ async function selectPatient(id) {
   state.encounter = null;
   state.capture = null;
   resetVisitPages();
+  revisionPaging.cursor = null;
+  revisionPaging.previous = [];
+  revisionPaging.page = 1;
+  revisionPaging.next = null;
+  ++revisionPaging.request;
+  el("revisionPanel").hidden = !mayClinicallyEdit();
   el("patientTitle").textContent = selected.full_name;
   el("patientDetails").textContent =
     "Documento " + selected.document_type + "-" + selected.document_number +
@@ -439,7 +516,10 @@ function safe(fn) {
 }
 
 for (const tab of document.querySelectorAll(".tab-button")) {
-  tab.addEventListener("click", () => setActiveView(tab.dataset.view));
+  tab.addEventListener("click", safe(async () => {
+    setActiveView(tab.dataset.view);
+    if (tab.dataset.view === "profile") await loadRevisions();
+  }));
 }
 el("backToVisitsButton").addEventListener("click", () => setActiveView("overview"));
 
@@ -479,9 +559,13 @@ el("navPatients").addEventListener("click", safe(async () => {
 el("navStaff").addEventListener("click", safe(async () => {
   if (state.role !== "admin") return;
   showScreen("staff");
+  el("staffManagePanel").hidden = true;
+  managedStaff = null;
   await loadStaff();
 }));
 el("newStaffButton").addEventListener("click", () => {
+  el("staffManagePanel").hidden = true;
+  managedStaff = null;
   el("staffCreatePanel").hidden = !el("staffCreatePanel").hidden;
 });
 el("cancelStaffButton").addEventListener("click", () => {
@@ -508,6 +592,68 @@ el("staffPrev").addEventListener("click", safe(async () => {
   staffPaging.cursor = staffPaging.previous.pop();
   staffPaging.page--;
   await loadStaff();
+}));
+el("cancelStaffManage").addEventListener("click", () => {
+  managedStaff = null;
+  el("staffManagePanel").hidden = true;
+  el("staffManageForm").reset();
+});
+el("staffManageForm").addEventListener("submit", safe(async event => {
+  if (!managedStaff) return;
+  const form = formValue(event.target);
+  const payload = {
+    role: form.role,
+    active: form.active === "true"
+  };
+  if (form.password) payload.password = form.password;
+  if (managedStaff.username === state.username && form.password) {
+    throw new Error("Cambie su propia contraseña desde «Mi contraseña».");
+  }
+  if (!payload.active && !confirm("¿Bloquear el acceso de este usuario?")) return;
+  await api("/api/admin/users/" + managedStaff.id, {
+    method: "PATCH", body: JSON.stringify(payload)
+  });
+  el("staffManagePanel").hidden = true;
+  managedStaff = null;
+  resetStaffPages();
+  await loadStaff();
+  toast("Permisos y sesiones actualizados.");
+}));
+el("changePasswordButton").addEventListener("click", () => {
+  el("accountPanel").hidden = false;
+  el("passwordForm").elements.current_password.focus();
+});
+el("closeAccountPanel").addEventListener("click", () => {
+  el("accountPanel").hidden = true;
+  el("passwordForm").reset();
+});
+el("passwordForm").addEventListener("submit", safe(async event => {
+  const values = formValue(event.target);
+  if (values.new_password !== values.confirmation) {
+    throw new Error("Las contraseñas no coinciden.");
+  }
+  await api("/api/auth/change-password", {
+    method: "POST", body: JSON.stringify({
+      current_password: values.current_password,
+      new_password: values.new_password
+    })
+  });
+  state.token = null;
+  showLogin();
+  toast("Contraseña actualizada. Inicie sesión de nuevo.");
+}));
+el("revisionNext").addEventListener("click", safe(async () => {
+  if (!revisionPaging.next) return;
+  revisionPaging.previous.push(revisionPaging.cursor);
+  revisionPaging.cursor = revisionPaging.next;
+  revisionPaging.page++;
+  await loadRevisions();
+}));
+el("revisionPrev").addEventListener("click", safe(async () => {
+  if (!revisionPaging.previous.length) return;
+  revisionPaging.cursor = revisionPaging.previous.pop();
+  revisionPaging.page--;
+  await loadRevisions();
 }));
 el("newPatientButton").addEventListener("click", () => showScreen("registration"));
 el("cancelPatientButton").addEventListener("click", safe(async () => {
@@ -583,18 +729,26 @@ el("patientEditForm").addEventListener("submit", safe(async e => {
   const form = formValue(e.target);
   await api("/api/patients/" + state.patient.id, {
     method: "PATCH", body: JSON.stringify({
-      ...form, birth_date: form.birth_date || null, phone: form.phone || null
+      ...form, birth_date: form.birth_date || null, phone: form.phone || null,
+      reason: form.reason || null
     })
   });
   await selectPatient(state.patient.id);
+  el("patientEditForm").elements.reason.value = "";
   setActiveView("profile");
+  await loadRevisions();
   toast("Datos personales actualizados.");
 }));
 el("historyForm").addEventListener("submit", safe(async e => {
   if (!state.patient) return;
   await api("/api/patients/" + state.patient.id + "/history", {
-    method: "PUT", body: JSON.stringify(formValue(e.target))
+    method: "PUT", body: JSON.stringify({
+      ...formValue(e.target),
+      reason: e.target.elements.reason.value || null
+    })
   });
+  e.target.elements.reason.value = "";
+  await loadRevisions();
   toast("Antecedentes actualizados.");
 }));
 el("staffForm").addEventListener("submit", safe(async e => {
@@ -619,7 +773,9 @@ el("clinicalForm").addEventListener("submit", safe(async e => {
   if (!state.encounter) return;
   const values = formValue(e.target);
   await api("/api/encounters/" + state.encounter.id, {
-    method: "PATCH", body: JSON.stringify(values)
+    method: "PATCH", body: JSON.stringify({
+      ...values, reason: values.reason || null
+    })
   });
   toast("Evolución clínica guardada.");
   await selectEncounter(state.encounter.id);
