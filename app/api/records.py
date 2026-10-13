@@ -54,6 +54,7 @@ def patient_directory(
     db: DB,
     user: User,
     q: str = Query(default="", max_length=100),
+    document_type: Optional[Literal["V", "E", "P", "OTRO"]] = Query(default=None),
     limit: int = Query(default=25, ge=1, le=50),
     before: Optional[int] = Query(default=None, ge=1),
 ):
@@ -71,6 +72,9 @@ def patient_directory(
         prefix = escaped + "%"
         filters.append("(p.full_name LIKE ? ESCAPE '\\' OR p.document_number LIKE ? ESCAPE '\\')")
         values.extend((prefix, prefix))
+    if document_type is not None:
+        filters.append("p.document_type = ?")
+        values.append(document_type)
     if before is not None:
         filters.append("p.id < ?")
         values.append(before)
