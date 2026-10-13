@@ -9,7 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import auth, records, sensors
+from app.api import auth, records, sensors, setup
 from app.storage import init_db
 
 
@@ -26,6 +26,7 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url=None, redoc_url=None, openapi_url=None,
 )
+app.include_router(setup.router)
 app.include_router(auth.router)
 app.include_router(records.router)
 app.include_router(sensors.router)
