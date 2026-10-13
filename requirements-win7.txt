@@ -1,0 +1,10 @@
+# LEGACY: laboratory compatibility only. Win7 and Python 3.8 are unsupported
+# upstream and must NEVER be used with real medical records.
+# Python 3.8.10 is the last 3.8 release with official Windows installers.
+fastapi==0.103.2
+starlette==0.27.0
+uvicorn==0.23.2
+pydantic==2.5.3
+pydantic-core==2.14.6
+anyio==3.7.1
+typing_extensions==4.8.0
