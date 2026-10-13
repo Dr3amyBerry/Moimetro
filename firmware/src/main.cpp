@@ -112,15 +112,6 @@ void keepWifi(unsigned long t) {
   }
 }
 
-bool beginHttp(HTTPClient &http, const String &route) {
-  if (WiFi.status() != WL_CONNECTED) return false;
-  WiFiClient client;
-  // NOTE: HTTP sends device credentials in cleartext. Bench/trusted LAN ONLY.
-  // HTTPClient stores its own client pointer: use the client in the same scope
-  // as http.GET()/POST(), not across function boundaries.
-  return false;
-}
-
 void pollCapture() {
   if (WiFi.status() != WL_CONNECTED) return;
   WiFiClient client;
