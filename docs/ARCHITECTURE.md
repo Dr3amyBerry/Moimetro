@@ -106,11 +106,14 @@ Las cédulas sirven para buscar, **no** como clave primaria. No usar registros r
 ## 6. Límites conocidos
 
 - La autenticación opera sobre una red local; sin TLS, el tráfico HTTP no está cifrado.
-- El firmware hace solicitudes HTTP breves que pueden interrumpir muestreo óptico; deben medirse consecuencias.
+- Aunque una tarea FreeRTOS dedicada evita bloqueos de muestras por HTTP en el bucle principal, todavía se deben medir pérdidas de FIFO, latencias I²C y calidad bajo cargas reales.
 - El criterio IR para presencia del dedo no es un diagnóstico; requiere calibración.
 - DS18B20 mide la temperatura local del sensor, no garantiza exactitud de temperatura central.
-- No hay SpO₂ calculado en firmware, ni reglas automáticas de prioridad clínica.
+- Se calcula **R a partir de PPG rojo/IR** y se admite calibración experimental explícita; no existe SpO₂ calibrado ni salida clínica aceptada por la API. Triaje automático deshabilitado.
+- La lectura óptica utiliza tarea FreeRTOS separada del tráfico HTTP; los huecos de adquisición reinician la ventana, pero ello todavía requiere pruebas físicas.
 - La UI almacena el token de usuario solo en memoria; recargar la página requiere nuevo inicio de sesión.
 - No hay todavía pruebas de recuperación del equipo físico, apagones ni restauración completa.
 
 Consulte [SEGURIDAD.md](SEGURIDAD.md) y [VALIDACION.md](VALIDACION.md) antes de cualquier prueba fuera del laboratorio.
+
+Véase [SPO2_CALIBRACION.md](SPO2_CALIBRACION.md) para la estimación óptica experimental y la validación pendiente.
