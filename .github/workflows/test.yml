@@ -35,5 +35,9 @@ jobs:
         run: python -m pip install platformio
       - name: Create fake build credentials
         run: cp firmware/include/secrets.example.h firmware/include/secrets.h
+      - name: Test SpO2 estimator on synthetic signals (native C++)
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -Ifirmware/include firmware/tests/test_spo2_estimator.cpp -o /tmp/moimetro-spo2-test
+          /tmp/moimetro-spo2-test
       - name: Compile ESP32 firmware
         run: pio run -d firmware
