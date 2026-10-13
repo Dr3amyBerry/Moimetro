@@ -4,7 +4,8 @@ import hashlib
 import sqlite3
 from collections import defaultdict
 from time import monotonic
-from typing import Annotated, Literal
+from typing import Dict, List, Literal
+from typing_extensions import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from pydantic import BaseModel, Field
@@ -15,7 +16,7 @@ router = APIRouter(prefix="/api")
 DB = Annotated[sqlite3.Connection, Depends(get_db)]
 User = Annotated[dict, Depends(require_user)]
 Admin = Annotated[dict, Depends(only("admin"))]
-_failed: dict[str, list[float]] = defaultdict(list)
+_failed: Dict[str, List[float]] = defaultdict(list)
 
 class Login(BaseModel):
     username: str = Field(min_length=3, max_length=50)
