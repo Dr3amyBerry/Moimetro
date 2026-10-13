@@ -62,6 +62,8 @@ void readPulse() {
     resetPulse();
     return;
   }
+  // If no valid beat has been detected for several seconds, invalidate old BPM.
+  if (lastBeat != 0 && millis() - lastBeat > 4000) resetPulse();
   if (!checkForBeat(ir)) return;
   const uint32_t instant = millis();
   if (lastBeat != 0) {
