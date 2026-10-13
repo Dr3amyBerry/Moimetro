@@ -1,0 +1,9 @@
+data/
+*.sqlite3
+*.db
+.env
+**/secrets.h
+__pycache__/
+.pytest_cache/
+.venv/
+.pio/
