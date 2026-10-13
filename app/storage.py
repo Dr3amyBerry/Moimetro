@@ -83,9 +83,40 @@ CREATE TABLE IF NOT EXISTS audit_events (
 CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_events(created_at);
 """
 
+# Prefix-aware full-text search keeps surname/document lookup usable when the
+# number of patients grows. FTS stores its index in the SAME local SQLite file.
+PATIENT_SEARCH_SCHEMA = """
+CREATE VIRTUAL TABLE IF NOT EXISTS patients_fts USING fts5(
+ full_name, document_number,
+ content='patients', content_rowid='id',
+ tokenize='unicode61 remove_diacritics 2'
+);
+CREATE TRIGGER IF NOT EXISTS patients_fts_ai AFTER INSERT ON patients BEGIN
+ INSERT INTO patients_fts(rowid,full_name,document_number)
+ VALUES(new.id,new.full_name,new.document_number);
+END;
+CREATE TRIGGER IF NOT EXISTS patients_fts_ad AFTER DELETE ON patients BEGIN
+ INSERT INTO patients_fts(patients_fts,rowid,full_name,document_number)
+ VALUES('delete',old.id,old.full_name,old.document_number);
+END;
+CREATE TRIGGER IF NOT EXISTS patients_fts_au
+AFTER UPDATE OF full_name,document_number ON patients BEGIN
+ INSERT INTO patients_fts(patients_fts,rowid,full_name,document_number)
+ VALUES('delete',old.id,old.full_name,old.document_number);
+ INSERT INTO patients_fts(rowid,full_name,document_number)
+ VALUES(new.id,new.full_name,new.document_number);
+END;
+"""
+
 def init_db():
     with connect() as db:
         db.executescript(SCHEMA)
+        # The first launch on an older DB rebuilds the FTS index once, without
+        # changing patients/encounters. A failed migration retries next launch.
+        db.executescript(PATIENT_SEARCH_SCHEMA)
+        if db.execute("PRAGMA user_version").fetchone()[0] < 1:
+            db.execute("INSERT INTO patients_fts(patients_fts) VALUES('rebuild')")
+            db.execute("PRAGMA user_version=1")
         db.execute("PRAGMA journal_mode=WAL")
 
 def audit(db, user_id, action, resource, resource_id):
