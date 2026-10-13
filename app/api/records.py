@@ -69,7 +69,7 @@ def patient_directory(
     values = []
     # Full text index supports surnames, accented names and partial documents
     # without scanning the complete patients table on each search.
-    typed_doc = re.fullmatch(r"([VEve])[-\\s]+(\\d+)", search)
+    typed_doc = re.fullmatch(r"([VEve])[-\s]+(\d+)", search)
     if typed_doc:
         prefix_type = typed_doc.group(1).upper()
         if document_type and document_type != prefix_type:
@@ -78,7 +78,7 @@ def patient_directory(
             document_type = prefix_type
         search = typed_doc.group(2)
     if search:
-        terms = re.findall(r"[^\\W_]+", search, re.UNICODE)
+        terms = re.findall(r"[^\W_]+", search, re.UNICODE)
         if terms:
             match_query = " AND ".join('"{}"*'.format(t.replace('"', '""'))
                                        for t in terms[:12])
