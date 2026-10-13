@@ -5,6 +5,16 @@ Sistema **local** de apoyo administrativo a consultas médicas, registro de paci
 > [!WARNING]
 > **PROTOTIPO TÉCNICO — NO VALIDADO CLÍNICAMENTE.** No usar para diagnóstico, tratamiento ni priorización autónoma. Solo datos ficticios hasta completar protección de datos, pruebas técnicas, revisión clínica y autorización del centro. La API **rechaza SpO₂ enviado por el firmware**; no muestra un 98 % inventado. El motor de triaje permanece deshabilitado.
 
+## Instalación fácil en Windows 7 y posteriores
+
+Moímetro incorpora instaladores **.exe autocontenidos**: el usuario no necesita instalar Python ni usar una terminal. El instalador crea accesos directos y el primer inicio ofrece un asistente para crear el administrador. La base se conserva fuera del directorio de instalación.
+
+Se generan tres variantes: **Windows 7 SP1+ x86**, **Windows 7 SP1+ x64** y **Windows 8.1+ x64 moderna**. El paquete legacy solo es apto para pruebas con datos ficticios debido a la falta de actualizaciones de seguridad de Windows 7 y Python 3.8.
+
+**[Descargar instaladores desde GitHub Actions](https://github.com/Dr3amyBerry/Moimetro/actions/workflows/windows-installer.yml)** · [Guía de instalación para Windows](docs/INSTALACION_WINDOWS.md).
+
+**Importante:** la existencia de la receta de empaquetado no garantiza todavía ejecución en Windows 7 real; la prueba física de ambas arquitecturas sigue pendiente.
+
 ## Funcionalidades implementadas en código
 
 - Registro y búsqueda de pacientes por tipo/número de documento, sin conexión a Internet.
