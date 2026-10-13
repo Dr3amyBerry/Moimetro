@@ -174,3 +174,44 @@ def test_consistent_backup_and_repeated_backup_refused(client, tmp_path):
         assert copied.execute("SELECT COUNT(*) FROM patients").fetchone()[0] == 1
     with pytest.raises(ValueError, match="existe"):
         backup_to(location)
+
+
+def test_installer_first_run_requires_loopback_and_one_time_token(client, monkeypatch):
+    from types import SimpleNamespace
+    from app.api.setup import InitialAdmin, setup_initial_admin
+    from app.storage import connect
+    token = "one-time-test-token-with-more-than-32-chars"
+    monkeypatch.setenv("MOIMETRO_SETUP_TOKEN", token)
+    with connect() as db:
+        db.execute("DELETE FROM users")
+    status = client.get("/api/setup/status")
+    assert status.status_code == 200
+    assert status.json() == {"required": True, "available": True}
+    # TestClient has host 'testclient': it must NOT be allowed to initialize accounts.
+    request = {"username": "localadmin", "password": "test-admin-password-123"}
+    assert client.post("/api/setup/admin", json=request, headers={
+        "X-Setup-Token": token
+    }).status_code == 403
+    with connect() as db:
+        result = setup_initial_admin(
+            InitialAdmin(**request),
+            SimpleNamespace(client=SimpleNamespace(host="127.0.0.1")),
+            db,
+            x_setup_token=token,
+        )
+        assert result["ok"] is True
+        row = db.execute("SELECT username,role FROM users").fetchone()
+        assert row["username"] == "localadmin" and row["role"] == "admin"
+    assert client.get("/api/setup/status").json()["required"] is False
+    assert "MOIMETRO_SETUP_TOKEN" not in __import__("os").environ
+
+
+def test_windows_launcher_uses_per_user_persistent_storage(tmp_path, monkeypatch):
+    from app.launcher import configure_user_data
+    from app.storage import db_path
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    folder = configure_user_data()
+    assert folder.name == "Moimetro"
+    assert db_path().parent == folder / "data"
+    assert db_path().parent.is_dir()
+    assert "Moimetro" in str(db_path())
