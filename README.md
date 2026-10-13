@@ -11,7 +11,7 @@ Moímetro incorpora instaladores **.exe autocontenidos**: el usuario no necesita
 
 Se generan tres variantes: **Windows 7 SP1+ x86**, **Windows 7 SP1+ x64** y **Windows 8.1+ x64 moderna**. El paquete legacy solo es apto para pruebas con datos ficticios debido a la falta de actualizaciones de seguridad de Windows 7 y Python 3.8.
 
-**[Descargar instaladores desde GitHub Actions](https://github.com/Dr3amyBerry/Moimetro/actions/workflows/windows-installer.yml)** · [Guía de instalación para Windows](docs/INSTALACION_WINDOWS.md).
+**[Descargar instaladores directamente desde GitHub Releases](https://github.com/Dr3amyBerry/Moimetro/releases/tag/v0.3.0-beta.1)** · [Guía de instalación para Windows](docs/INSTALACION_WINDOWS.md).
 
 **Importante:** la existencia de la receta de empaquetado no garantiza todavía ejecución en Windows 7 real; la prueba física de ambas arquitecturas sigue pendiente.
 
@@ -20,6 +20,8 @@ Se generan tres variantes: **Windows 7 SP1+ x86**, **Windows 7 SP1+ x64** y **Wi
 - Registro y búsqueda de pacientes por tipo/número de documento, sin conexión a Internet.
 - Consultas con fecha, motivo, evaluación, diagnóstico, tratamiento e historial.
 - Usuarios con roles: recepción, enfermería, médico y administrador.
+- Personal: bloqueo, cambios de rol, contraseñas, revocación de sesiones y prevención del autobloqueo del último administrador.
+- Historial de cambios de pacientes, antecedentes y consultas con versiones append-only, autor y motivo, visible según permisos.
 - Autenticación por contraseña PBKDF2 y tokens de sesión limitados a 8 horas.
 - SQLite local, auditoría básica de accesos/operaciones y controles de integridad.
 - Sesiones de captura vinculadas explícitamente con la consulta y el dispositivo.
