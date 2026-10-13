@@ -25,8 +25,12 @@ Se generan tres variantes: **Windows 7 SP1+ x86**, **Windows 7 SP1+ x64** y **Wi
 - Sesiones de captura vinculadas explícitamente con la consulta y el dispositivo.
 - API para lecturas del ESP32: calidad de señal, rechazo de datos inválidos y aceptación humana de mediciones.
 - Registro manual identificado como tal, con nota obligatoria sobre procedencia.
+- Interfaz empresarial en grises: directorio paginado, formularios separados, búsqueda por apellido y cédula, filtros y administración de personal.
+- SQLite FTS5 indexado y paginación por cursor para no cargar listados completos en memoria.
 - Interfaz web responsive, sin recursos externos ni dependencia de Internet.
 - Pruebas automatizadas de flujos críticos de API.
+
+**No se han probado aún cargas reales de 50 000–100 000 expedientes ni el rendimiento físico de Windows 7.** [Diseño del directorio](docs/DIRECTORIO_Y_ESCALABILIDAD.md).
 
 **No se ha acreditado aún:** compilación o precisión de sensores reales, seguridad de una red compartida de consultorio, validez clínica, estrategia integral de backups, migraciones, o despliegue autorizado.
 
