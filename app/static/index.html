@@ -65,6 +65,17 @@
       </section>
       <div id="patientWork" hidden>
         <section class="panel">
+          <h2>Datos personales</h2>
+          <form id="patientEditForm">
+            <div class="columns">
+              <label>Nombre completo<input name="full_name" required minlength="2"></label>
+              <label>Fecha de nacimiento<input type="date" name="birth_date"></label>
+            </div>
+            <label>Teléfono de contacto<input name="phone"></label>
+            <button class="secondary" type="submit">Guardar datos del paciente</button>
+          </form>
+        </section>
+        <section class="panel">
           <h2>Antecedentes y alergias</h2>
           <p class="muted">La información de este apartado debe ser verificada por el personal autorizado.</p>
           <form id="historyForm">
