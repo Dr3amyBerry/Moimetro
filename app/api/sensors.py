@@ -21,13 +21,14 @@ Device = Annotated[str, Depends(require_device)]
 
 @router.post("/encounters/{encounter_id}/capture", status_code=201)
 def start_capture(encounter_id: int, db: DB, user: CanRecord):
-    encounter = encounter_or_404(db, encounter_id)
-    if encounter["status"] != "open":
-        raise HTTPException(409, "Consulta cerrada.")
     device_id = os.environ.get("MOIMETRO_DEVICE_ID", "esp32-01")
     session_id = secrets.token_urlsafe(18)
     try:
         with db:
+            db.execute("BEGIN IMMEDIATE")
+            encounter = encounter_or_404(db, encounter_id)
+            if encounter["status"] != "open":
+                raise HTTPException(409, "Consulta cerrada.")
             db.execute(
                 "INSERT INTO capture_sessions(id,encounter_id,device_id,started_at) VALUES(?,?,?,?)",
                 (session_id, encounter_id, device_id, now()))
@@ -99,18 +100,20 @@ def validate_sample(kind: str, quality: str, value: float | None):
 def ingest_device(payload: DeviceBatch, db: DB, device_id: Device):
     if payload.device_id != device_id:
         raise HTTPException(403, "Identificador de dispositivo incorrecto.")
-    # CRITICAL: MAX30102 SpO2 is NOT implemented or validated in supplied sketch.
+    # Never accept fabricated device oxygen saturation.
     if any(sample.kind == "spo2_pct" for sample in payload.samples):
         raise HTTPException(422, "SpO₂ por dispositivo deshabilitado hasta validación.")
     for sample in payload.samples:
         validate_sample(sample.kind, sample.quality, sample.value)
-    capture = db.execute(
-        """SELECT c.*, e.status AS encounter_status FROM capture_sessions c
-           JOIN encounters e ON e.id=c.encounter_id WHERE c.id=? AND c.device_id=?""",
-        (payload.session_id, device_id)).fetchone()
-    if not capture or capture["ended_at"] or capture["encounter_status"] != "open":
-        raise HTTPException(409, "No hay una sesión válida activa.")
     with db:
+        db.execute("BEGIN IMMEDIATE")
+        capture = db.execute(
+            """SELECT c.*,e.status AS encounter_status FROM capture_sessions c
+               JOIN encounters e ON e.id=c.encounter_id
+               WHERE c.id=? AND c.device_id=?""",
+            (payload.session_id, device_id)).fetchone()
+        if not capture or capture["ended_at"] or capture["encounter_status"] != "open":
+            raise HTTPException(409, "No hay una sesión válida activa.")
         for sample in payload.samples:
             db.execute(
                 """INSERT INTO measurements
@@ -133,31 +136,29 @@ def readings(encounter_id: int, db: DB, user: User):
 
 @router.post("/measurements/{measurement_id}/accept")
 def accept_reading(measurement_id: int, db: DB, user: CanRecord):
-    reading = db.execute(
-        """SELECT m.*,e.status AS encounter_status FROM measurements m
-           JOIN encounters e ON e.id=m.encounter_id WHERE m.id=?""",
-        (measurement_id,)).fetchone()
-    if not reading:
-        raise HTTPException(404, "Lectura inexistente.")
-    if (reading["status"] != "pending" or reading["quality"] != "ok"
-            or reading["encounter_status"] != "open"):
-        raise HTTPException(409, "Lectura inválida o ya procesada.")
     with db:
-        db.execute("UPDATE measurements SET status='accepted',accepted_at=?,accepted_by=? WHERE id=?",
-                   (now(), user["id"], measurement_id))
+        # Atomic compare-and-set; an already processed or closed visit never changes.
+        cursor = db.execute(
+            """UPDATE measurements SET status='accepted',accepted_at=?,accepted_by=?
+               WHERE id=? AND status='pending' AND quality='ok'
+               AND EXISTS (SELECT 1 FROM encounters e
+                           WHERE e.id=measurements.encounter_id AND e.status='open')""",
+            (now(), user["id"], measurement_id))
+        if cursor.rowcount != 1:
+            raise HTTPException(409, "Lectura inexistente, inválida, cerrada o ya procesada.")
         audit(db, user["id"], "accept", "measurement", measurement_id)
     return {"ok": True}
 
 @router.post("/measurements/{measurement_id}/reject")
 def reject_reading(measurement_id: int, db: DB, user: CanRecord):
-    reading = db.execute(
-        "SELECT status FROM measurements WHERE id=?", (measurement_id,)).fetchone()
-    if not reading:
-        raise HTTPException(404, "Lectura inexistente.")
-    if reading["status"] != "pending":
-        raise HTTPException(409, "Lectura ya procesada.")
     with db:
-        db.execute("UPDATE measurements SET status='rejected' WHERE id=?", (measurement_id,))
+        cursor = db.execute(
+            """UPDATE measurements SET status='rejected' WHERE id=? AND status='pending'
+               AND EXISTS (SELECT 1 FROM encounters e
+                           WHERE e.id=measurements.encounter_id AND e.status='open')""",
+            (measurement_id,))
+        if cursor.rowcount != 1:
+            raise HTTPException(409, "Lectura inexistente, cerrada o ya procesada.")
         audit(db, user["id"], "reject", "measurement", measurement_id)
     return {"ok": True}
 
@@ -168,11 +169,12 @@ class ManualMeasurement(BaseModel):
 
 @router.post("/encounters/{encounter_id}/manual-measurements", status_code=201)
 def add_manual(encounter_id: int, payload: ManualMeasurement, db: DB, user: CanRecord):
-    encounter = encounter_or_404(db, encounter_id)
-    if encounter["status"] != "open":
-        raise HTTPException(409, "Consulta cerrada.")
     validate_sample(payload.kind, "ok", payload.value)
     with db:
+        db.execute("BEGIN IMMEDIATE")
+        encounter = encounter_or_404(db, encounter_id)
+        if encounter["status"] != "open":
+            raise HTTPException(409, "Consulta cerrada.")
         cursor = db.execute(
             """INSERT INTO measurements
                (encounter_id,kind,value,unit,quality,origin,status,notes,received_at,accepted_at,accepted_by)
